@@ -99,6 +99,23 @@ def main():
 
     sd = model.state_dict()
 
+    # GQA -> MHA 转换: esp32-ai llm.h 是标准 MHA (q/k/v 同用 n_heads 头),
+    # MiniMind 是 GQA (q_heads=8, kv_heads=4)。将 k_proj/v_proj 的 kv 头
+    # repeat_interleave 复制为 q_heads 头, 数学等价 (MHA 每 2 个 q 头共享 kv)。
+    # [kv_heads*head_dim, D] -> [q_heads*head_dim, D] = [D, D]
+    if cfg.num_key_value_heads < cfg.num_attention_heads:
+        n_rep = cfg.num_attention_heads // cfg.num_key_value_heads
+        hd = cfg.head_dim
+        for i in range(cfg.num_hidden_layers):
+            for proj in ('k_proj', 'v_proj'):
+                key = f'model.layers.{i}.self_attn.{proj}.weight'
+                w = sd[key]
+                assert w.shape[0] == cfg.num_key_value_heads * hd, \
+                    f'{key} shape {w.shape} != kv_heads*head_dim'
+                w2 = w.view(cfg.num_key_value_heads, hd, -1).repeat_interleave(n_rep, dim=0).reshape(-1, w.shape[1])
+                sd[key] = w2
+        print(f'GQA->MHA: kv_heads {cfg.num_key_value_heads} -> {cfg.num_attention_heads} (n_rep={n_rep})')
+
     # 固定顺序的 tensor 计划 (C 端按此顺序硬编码读取)
     # minimind 命名 -> 语义 (esp32-ai 命名)
     #   embed_tokens.weight (tied=lm_head) -> tok_emb.weight
@@ -177,7 +194,15 @@ def main():
     dq_sd['lm_head.weight'] = dq_sd['model.embed_tokens.weight']
 
     # Golden: 加载反量化权重, forward 固定 prompt, 存最后位置 logits
-    gold = MiniMindForCausalLM(cfg)
+    # 用 MHA 配置构建 (k/v 已转换为 q_heads 头), 与固件 llm.h 的 forward 一致
+    gold_cfg = MiniMindConfig(
+        hidden_size=cfg.hidden_size,
+        num_hidden_layers=cfg.num_hidden_layers,
+        use_ple=True, ple_dim=cfg.ple_dim,
+        num_attention_heads=cfg.num_attention_heads,
+        num_key_value_heads=cfg.num_attention_heads,  # MHA: kv_heads = q_heads
+    )
+    gold = MiniMindForCausalLM(gold_cfg)
     gold.load_state_dict(dq_sd)
     gold.eval()
     prompt = [1, 500, 1000, 200, 42, 777, 13, 99]
