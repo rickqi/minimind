@@ -113,7 +113,8 @@ def main():
     ap.add_argument('--num_hidden_layers', type=int, default=6)
     ap.add_argument('--ple_dim', type=int, default=96)
     ap.add_argument('--weight', type=str, default='full_sft_h1', help='权重前缀 (full_sft_h1 / full_sft_h2)')
-    ap.add_argument('--save_dir', type=str, default='out')
+    ap.add_argument('--save_dir', type=str, default='out', help='训练权重目录 (fp16 .pth 输入)')
+    ap.add_argument('--export_dir', type=str, default='models', help='int4 部署产物导出目录 (默认 models/, 与训练产物 out/ 分离)')
     ap.add_argument('--group', type=int, default=32)
     ap.add_argument('--bits', type=int, default=4)
     ap.add_argument('--data_path', type=str, default='dataset/pretrain_t2t_mini.jsonl')
@@ -148,8 +149,9 @@ def main():
     q = val_loss(qmodel, tokenizer, args.data_path, args.max_seq_len, args.device, args.val_iters)
     print(f'int{args.bits} val {q:.4f} (ppl {math.exp(q):.2f}) | deg {q-fp:+.4f} | quantized {nq/1e6:.2f}M params | norms kept {ns}')
 
-    # 导出 int4 权重
-    export_path = f'{args.save_dir}/{args.weight}_{args.hidden_size}_int{args.bits}_g{args.group}.pth'
+    # 导出 int4 权重 (部署产物 -> 独立 export_dir, 与训练产物 out/ 分离)
+    os.makedirs(args.export_dir, exist_ok=True)
+    export_path = f'{args.export_dir}/{args.weight}_{args.hidden_size}_int{args.bits}_g{args.group}.pth'
     state = export_int4_weights(qmodel, export_path)
     # 计算导出文件大小
     size = sum(
