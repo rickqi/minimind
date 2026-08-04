@@ -39,12 +39,16 @@
   - Tensor 布局：int4 codes 2-per-byte（ragged, group=32）+ fp16 scales；norms 保持 fp32
   - 导出 golden 参考（固定 prompt 的最后位置 logits，npz+txt）供 C 端口正确性验证
   - 产物：`models/full_sft_h{1,2,3}_{dim}_ple1.bin`（H1 **6.09 MB** / H2 **14.07 MB** / H3 **21.51 MB**）+ `_golden.npz/_golden.txt`
-- **DPO 偏好优化**（H2, `trainer/train_dpo.py` 新增 `--use_ple` 支持）
-  - 在 `full_sft_h2` 上叠加 DPO（beta=0.15, lr=4e-8, dpo.jsonl 17,166 条偏好对, 4,292 steps）
-  - DPO loss 0.68 → 0.52
+- **DPO 偏好优化**（H1/H2/H3, `trainer/train_dpo.py` 新增 `--use_ple` 支持）
+  - 分别在 `full_sft_h{1,2,3}` 上叠加 DPO（beta=0.15, lr=4e-8, dpo.jsonl 17,166 条偏好对, 4,292 steps）
+  - DPO loss：H1 0.68→0.51 / H2 0.68→0.52 / H3 0.68→0.57
   - 效果：消除重复性表达、回答更简洁准确、结构化更强
-  - 权重：`out/dpo_h2_384_ple.pth`（fp16，gitignored）
+  - 权重：`out/dpo_h{1,2,3}_{dim}_ple.pth`（fp16，gitignored）
+- **DPO 后量化导出**（针对 PLE 模式的最终部署产物, 基于 DPO 调优权重）
+  - int4：`models/dpo_h{1,2,3}_{dim}_int4_g32.pth`（H1 11.5MB / H2 26.5MB / H3 40.6MB）
+  - PLE1：`models/dpo_h{1,2,3}_{dim}_ple1.bin`（H1 **6.09 MB** / H2 **14.07 MB** / H3 **21.51 MB**）+ golden
+  - DPO 后量化鲁棒性与 SFT 后一致（deg H1 +0.124 / H2 +0.041 / H3 +0.033）——极小 lr 偏好微调不改变基础能力
 
 ### 待办
 
-- 无（PLE 全流程：预训练 → SFT → DPO → int4 量化 → PLE1 导出 已完成）
+- 无（PLE 全流程：预训练 → SFT → DPO → int4 量化 → PLE1 导出 已完成，含 DPO 调优后最终部署产物）
