@@ -55,7 +55,24 @@
 - **`export_ple1.py` GQA→MHA 转换**（`--num_key_value_heads`）
   - kv 头 `repeat_interleave` 复制扩展（4→8 头），数学等价（实测 logits diff=0.0）
   - 使 PLE1 导出兼容 MHA 风格的 C 推理核（esp32-ai llm.h）
+- **医疗数据补充管线**（三管线独立执行 + 混合策略）
+  - **管线A** `scripts/build_medical_pretrain.py`: 医疗 Pretrain 语料
+    - 三源: `esp32-ai/data_v4/corpus.txt` (348MB) + `D:\docs\raw\medica` (444 md) + `D:\docs\raw\临床诊疗指南全集` (76 md)
+    - 清洗（YAML frontmatter/页码/HTML/LaTeX/水印黑名单）+ 段落分块 + **字符 n-gram MinHash 去重**（threshold 0.8, dedup 9.5%）
+    - 产物: `dataset/pretrain_medical.jsonl`（**123,292 条** / 348.9MB）+ `out/medical_pretrain_report.json`
+  - **管线B1** `scripts/build_medical_sft_b1.py`: 直接转换
+    - `esp32-ai/data_v4/kb/format_data.jsonl`（11K 可读医学 QA）→ minimind SFT 格式
+    - 产物: `dataset/sft_medical_b1.jsonl`（**10,683 条**）
+  - **管线B2** `scripts/build_medical_sft_b2.py`: DeepSeek V4 Flash 合成 QA
+    - 临床诊疗指南【】锚点切分 → 提取 **594 个疾病**（概述/临床表现/诊断要点/治疗原则及方案）
+    - V4 Flash（1M 上下文, JSON Output）批量生成, 断点续跑缓存, API timeout 保护
+    - 产物: `dataset/sft_medical_b2.jsonl`（**3,521 条**, 0 失败, 答案含具体医学数值）
+  - **混合策略** `scripts/mix_medical.py`（esp32-ai V4 经验调整）
+    - Pretrain 1:2（医学:通用）→ `dataset/pretrain_mixed.jsonl`（**369,876 条** / 589.4MB）
+    - SFT 1:3 → `dataset/sft_medical_mixed.jsonl`（**56,816 条** / 92.4MB）
+  - 三管线均输出质量报告（可重复执行对比）, B2 支持断点续跑
 
 ### 待办
 
-- 无（PLE 全流程：预训练 → SFT → DPO → int4 量化 → PLE1 导出 已完成，含 DPO 调优后最终部署产物）
+- 医疗混合数据训练验证（`train_pretrain.py --data_path dataset/pretrain_mixed.jsonl`）
+- 医疗 SFT 效果评估（医学问题问答对比）
