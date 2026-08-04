@@ -48,6 +48,13 @@
   - int4：`models/dpo_h{1,2,3}_{dim}_int4_g32.pth`（H1 11.5MB / H2 26.5MB / H3 40.6MB）
   - PLE1：`models/dpo_h{1,2,3}_{dim}_ple1.bin`（H1 **6.09 MB** / H2 **14.07 MB** / H3 **21.51 MB**）+ golden
   - DPO 后量化鲁棒性与 SFT 后一致（deg H1 +0.124 / H2 +0.041 / H3 +0.033）——极小 lr 偏好微调不改变基础能力
+- **ESP32 词表生成** `scripts/gen_vocab_minimind.py`（MiniMind BPE+ByteLevel → esp32-ai vocab.h）
+  - 用 `bytes_to_unicode` **逆映射**还原每个 token 的原始 UTF-8 字节（关键：不用 `tok.decode([i])`，避免 ByteLevel 中间片段被 U+FFFD 替换符污染）
+  - 产物：`esp32-ai/firmware/esp32_llm_zh_v3/vocab.h`（**VOCAB_N=6400**, blob 29.5KB）
+  - 验证：特殊 token 与 BPE token（"你好"/"什么"/"是"）字节往返正确
+- **`export_ple1.py` GQA→MHA 转换**（`--num_key_value_heads`）
+  - kv 头 `repeat_interleave` 复制扩展（4→8 头），数学等价（实测 logits diff=0.0）
+  - 使 PLE1 导出兼容 MHA 风格的 C 推理核（esp32-ai llm.h）
 
 ### 待办
 
