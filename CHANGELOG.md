@@ -32,9 +32,13 @@
 - int4 导出：`models/full_sft_h{1,2}_{dim}_int4_g32.pth`（gitignored，codes+fp16 scales）
   - H1 实测 11.5 MB（理论纯 int4 权重 5.4 MB）
   - H2 实测 26.5 MB（理论纯 int4 权重 12.5 MB）
+- **PLE1 扁平二进制导出** `scripts/export_ple1.py`（对齐 esp32-ai `src/export.py` 格式，供 C 运行时 mmap 烧录）
+  - Header: magic `0x504C4531` + 8×int32（vocab/d/layers/heads/ffn/ple_dim/seq_len/group）+ float rope_theta
+  - Tensor 布局：int4 codes 2-per-byte（ragged, group=32）+ fp16 scales；norms 保持 fp32
+  - 导出 golden 参考（固定 prompt 的最后位置 logits，npz+txt）供 C 端口正确性验证
+  - 产物：`models/full_sft_h1_h256_ple1.bin`（**6.09 MB**）、`models/full_sft_h2_h384_ple1.bin`（**14.07 MB**）+ `_golden.npz/_golden.txt`
 
 ### 待办
 
 - [ ] H3 升级：d512/l8/p128，约 37.5M 参数，int4 约 18.8MB（收益递减，后续执行）
 - [ ] LoRA/DPO 对齐：在 H2 上叠加偏好优化，提升回答质量
-- [ ] PLE1 扁平二进制导出（对齐 esp32-ai `export.py`，供 C 运行时直接烧录）
