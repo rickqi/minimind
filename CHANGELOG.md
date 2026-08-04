@@ -22,23 +22,24 @@
 
 ### 🚀 训练成果（实验性，未随仓库发布权重）
 
-| 模型 | 配置 | 总参数 | int4 尺寸 | 预训练 loss | SFT loss | int4 deg |
-|---|---|---|---|---|---|---|
-| H1 | d256/l6/p96 | 10.79M | 5.4MB | 2.27 | 2.04 | +0.124 |
-| H2 | d384/l8/p128 | 24.95M | 12.5MB | 2.07 | 1.77 | +0.041 |
+| 模型 | 配置 | 总参数 | int4 尺寸 | PLE1 尺寸 | 预训练 loss | SFT loss | int4 deg |
+|---|---|---|---|---|---|---|---|
+| H1 | d256/l6/p96 | 10.79M | 5.4MB | 6.09MB | 2.27 | 2.04 | +0.124 |
+| H2 | d384/l8/p128 | 24.95M | 12.5MB | 14.07MB | 2.07 | 1.77 | +0.041 |
+| H3 | d512/l8/p128 | 38.16M | 19.1MB | 21.51MB | 1.95 | 1.63 | +0.033 |
 
-- 在 WSL（RTX 5080）上使用 `pretrain_t2t_mini.jsonl` + `sft_t2t_mini.jsonl` 训练，总耗时约 1 小时（H1）/ 2 小时（H2）
-- 权重文件：`out/pretrain_h{1,2}_{dim}_ple.pth`、`out/full_sft_h{1,2}_{dim}_ple.pth`（fp16，gitignored）
-- int4 导出：`models/full_sft_h{1,2}_{dim}_int4_g32.pth`（gitignored，codes+fp16 scales）
+- 在 WSL（RTX 5080）上使用 `pretrain_t2t_mini.jsonl` + `sft_t2t_mini.jsonl` 训练，总耗时约 1 小时（H1）/ 2 小时（H2）/ 2.5 小时（H3）
+- 权重文件：`out/pretrain_h{1,2,3}_{dim}_ple.pth`、`out/full_sft_h{1,2,3}_{dim}_ple.pth`（fp16，gitignored）
+- int4 导出：`models/full_sft_h{1,2,3}_{dim}_int4_g32.pth`（gitignored，codes+fp16 scales）
   - H1 实测 11.5 MB（理论纯 int4 权重 5.4 MB）
   - H2 实测 26.5 MB（理论纯 int4 权重 12.5 MB）
+  - H3 实测 40.6 MB（理论纯 int4 权重 19.1 MB）
 - **PLE1 扁平二进制导出** `scripts/export_ple1.py`（对齐 esp32-ai `src/export.py` 格式，供 C 运行时 mmap 烧录）
   - Header: magic `0x504C4531` + 8×int32（vocab/d/layers/heads/ffn/ple_dim/seq_len/group）+ float rope_theta
   - Tensor 布局：int4 codes 2-per-byte（ragged, group=32）+ fp16 scales；norms 保持 fp32
   - 导出 golden 参考（固定 prompt 的最后位置 logits，npz+txt）供 C 端口正确性验证
-  - 产物：`models/full_sft_h1_h256_ple1.bin`（**6.09 MB**）、`models/full_sft_h2_h384_ple1.bin`（**14.07 MB**）+ `_golden.npz/_golden.txt`
+  - 产物：`models/full_sft_h{1,2,3}_{dim}_ple1.bin`（H1 **6.09 MB** / H2 **14.07 MB** / H3 **21.51 MB**）+ `_golden.npz/_golden.txt`
 
 ### 待办
 
-- [ ] H3 升级：d512/l8/p128，约 37.5M 参数，int4 约 18.8MB（收益递减，后续执行）
 - [ ] LoRA/DPO 对齐：在 H2 上叠加偏好优化，提升回答质量
