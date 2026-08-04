@@ -8,3 +8,4 @@ checkpoints/
 dataset/*.jsonl
 dataset/*.bin
 dataset/*.csv
+models/

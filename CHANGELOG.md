@@ -18,6 +18,7 @@
 - **int4 量化导出脚本** `scripts/quantize_ple.py`（移植 esp32-ai `src/quantize.py` 的 group-wise symmetric int4 PTQ）
   - `--group 32` 适配 SFT 模型（esp32-ai 实测 group=128 会崩、group=32 可用）
   - 输出量化前后 val loss 退化（deg）报告 + int4 codes/scales 权重
+  - `--export_dir`（默认 `models/`）：部署产物与训练产物 `out/` 分离存放（`models/` 已 gitignore）
 
 ### 🚀 训练成果（实验性，未随仓库发布权重）
 
@@ -28,7 +29,7 @@
 
 - 在 WSL（RTX 5080）上使用 `pretrain_t2t_mini.jsonl` + `sft_t2t_mini.jsonl` 训练，总耗时约 1 小时（H1）/ 2 小时（H2）
 - 权重文件：`out/pretrain_h{1,2}_{dim}_ple.pth`、`out/full_sft_h{1,2}_{dim}_ple.pth`（fp16，gitignored）
-- int4 导出：`out/full_sft_h{1,2}_{dim}_int4_g32.pth`（gitignored，codes+fp16 scales）
+- int4 导出：`models/full_sft_h{1,2}_{dim}_int4_g32.pth`（gitignored，codes+fp16 scales）
   - H1 实测 11.5 MB（理论纯 int4 权重 5.4 MB）
   - H2 实测 26.5 MB（理论纯 int4 权重 12.5 MB）
 
