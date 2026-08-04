@@ -28,6 +28,11 @@ class MiniMindConfig(PretrainedConfig):
         self.rms_norm_eps = kwargs.get("rms_norm_eps", 1e-6)
         self.rope_theta = kwargs.get("rope_theta", 1e6)
         self.tie_word_embeddings = kwargs.get("tie_word_embeddings", True)
+        ### PLE (Per-Layer Embedding) specific configs (ignored if use_ple = False)
+        # 参考 esp32-ai src/model.py: 每层残差注入 Embedding(vocab, n_layers*ple_dim) 稀疏查找表,
+        # 以 flash 存储换取 SRAM 驻留空间,适配 ESP32-S3 等嵌入式部署
+        self.use_ple = kwargs.get("use_ple", False)
+        self.ple_dim = kwargs.get("ple_dim", self.hidden_size // 4)
         self.inference_rope_scaling = kwargs.get("inference_rope_scaling", False)
         self.rope_scaling = {
             "beta_fast": 32,
@@ -182,8 +187,13 @@ class MiniMindBlock(nn.Module):
         self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.mlp = FeedForward(config) if not config.use_moe else MOEFeedForward(config)
+        if config.use_ple:
+            # PLE 支路(参考 esp32-ai Block): 将每层的稀疏嵌入表输入 gate 到残差流
+            self.ple_gate = nn.Linear(config.hidden_size, config.ple_dim, bias=False)
+            self.ple_proj = nn.Linear(config.ple_dim, config.hidden_size, bias=False)
+            self.ple_norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def forward(self, hidden_states, position_embeddings, past_key_value=None, use_cache=False, attention_mask=None):
+    def forward(self, hidden_states, position_embeddings, past_key_value=None, use_cache=False, attention_mask=None, ple=None):
         residual = hidden_states
         hidden_states, present_key_value = self.self_attn(
             self.input_layernorm(hidden_states), position_embeddings,
@@ -191,6 +201,10 @@ class MiniMindBlock(nn.Module):
         )
         hidden_states += residual
         hidden_states = hidden_states + self.mlp(self.post_attention_layernorm(hidden_states))
+        if ple is not None:
+            # x = x + RMSNorm(ple_proj(gelu(ple_gate(x)) * ple_layer))
+            g = F.gelu(self.ple_gate(hidden_states))
+            hidden_states = hidden_states + self.ple_norm(self.ple_proj(g * ple))
         return hidden_states, present_key_value
 
 class MiniMindModel(nn.Module):
@@ -205,6 +219,16 @@ class MiniMindModel(nn.Module):
         freqs_cos, freqs_sin = precompute_freqs_cis(dim=config.head_dim, end=config.max_position_embeddings, rope_base=config.rope_theta, rope_scaling=config.rope_scaling)
         self.register_buffer("freqs_cos", freqs_cos, persistent=False)
         self.register_buffer("freqs_sin", freqs_sin, persistent=False)
+        if config.use_ple:
+            # PLE: 稀疏每层嵌入表 + 上下文感知投影 (参考 esp32-ai TinyLM)
+            #   table  (vocab x n_layers x ple_dim): 每 token 只读一行 -> flash 驻留
+            #   proj   (hidden x n_layers x ple_dim): 上下文化输入, 参与 dense core
+            self.ple_table = nn.Embedding(config.vocab_size, self.num_hidden_layers * config.ple_dim)
+            self.ple_model_proj = nn.Linear(config.hidden_size, self.num_hidden_layers * config.ple_dim, bias=False)
+            self.ple_proj_norm = RMSNorm(config.ple_dim, eps=config.rms_norm_eps)
+            # 每层 ple_norm 增益置零, 使 PLE 分支从精确 no-op 开始 (与 esp32-ai 一致)
+            for block in self.layers:
+                nn.init.zeros_(block.ple_norm.weight)
 
     def forward(self, input_ids, attention_mask=None, past_key_values=None, use_cache=False, **kwargs):
         batch_size, seq_length = input_ids.shape
@@ -217,14 +241,22 @@ class MiniMindModel(nn.Module):
             freqs_cos, freqs_sin = precompute_freqs_cis(dim=self.config.head_dim, end=self.config.max_position_embeddings, rope_base=self.config.rope_theta, rope_scaling=self.config.rope_scaling)
             self.freqs_cos, self.freqs_sin = freqs_cos.to(hidden_states.device), freqs_sin.to(hidden_states.device)
         position_embeddings = (self.freqs_cos[start_pos:start_pos + seq_length], self.freqs_sin[start_pos:start_pos + seq_length])
+        ple = None
+        if self.config.use_ple:
+            # 构造每层 PLE 输入: (proj(embed)/sqrt(d)) 与 table*sqrt(p) 归一化后按层切片
+            ple = self.ple_model_proj(hidden_states) * (self.config.hidden_size ** -0.5)
+            ple = self.ple_proj_norm(ple.view(batch_size, seq_length, self.num_hidden_layers, self.config.ple_dim))
+            table = self.ple_table(input_ids).view(batch_size, seq_length, self.num_hidden_layers, self.config.ple_dim)
+            ple = (ple + table * (self.config.ple_dim ** 0.5)) * (2 ** -0.5)
         presents = []
-        for layer, past_key_value in zip(self.layers, past_key_values):
+        for i, layer in enumerate(self.layers):
             hidden_states, present = layer(
                 hidden_states,
                 position_embeddings,
-                past_key_value=past_key_value,
+                past_key_value=past_key_values[i],
                 use_cache=use_cache,
-                attention_mask=attention_mask
+                attention_mask=attention_mask,
+                ple=None if ple is None else ple[:, :, i]
             )
             presents.append(present)
         hidden_states = self.norm(hidden_states)
@@ -241,6 +273,31 @@ class MiniMindForCausalLM(PreTrainedModel, GenerationMixin):
         self.lm_head = nn.Linear(self.config.hidden_size, self.config.vocab_size, bias=False)
         if self.config.tie_word_embeddings: self.model.embed_tokens.weight = self.lm_head.weight
         self.post_init()
+        if self.config.use_ple:
+            # post_init() 会重新初始化权重, 需在其后置零 ple_norm 增益使 PLE 分支从 no-op 开始
+            for block in self.model.layers:
+                nn.init.zeros_(block.ple_norm.weight)
+
+    def param_budget(self):
+        """PLE 三层参数预算 (参考 esp32-ai src/model.py:238):
+           core   -- 每 token 密集访问 (attention+FFN+PLE proj/gate)   -> SRAM 驻留预算
+           table  -- 稀疏每 token 一行 (PLE lookup table)              -> flash 驻留
+           stream -- 输出 head 顺序扫描 (lm_head)                     -> 带宽, 非 SRAM
+        非 PLE 模型: table=0, 全部 dense 参数计入 core+stream.
+        """
+        cfg = self.config
+        seen, total = set(), 0
+        table, stream = 0, 0
+        if cfg.use_ple:
+            table = self.model.ple_table.weight.numel()
+        stream = self.lm_head.weight.numel()
+        for p in self.parameters():
+            if id(p) in seen:
+                continue  # tied weights counted once
+            seen.add(id(p))
+            total += p.numel()
+        core = total - table - stream
+        return {"core": core, "table": table, "stream": stream, "total": total}
 
     def forward(self, input_ids, attention_mask=None, past_key_values=None, use_cache=False, logits_to_keep=0, labels=None, **kwargs):
         hidden_states, past_key_values, aux_loss = self.model(input_ids, attention_mask, past_key_values, use_cache, **kwargs)
