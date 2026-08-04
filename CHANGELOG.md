@@ -28,7 +28,9 @@
 
 - 在 WSL（RTX 5080）上使用 `pretrain_t2t_mini.jsonl` + `sft_t2t_mini.jsonl` 训练，总耗时约 1 小时（H1）/ 2 小时（H2）
 - 权重文件：`out/pretrain_h{1,2}_{dim}_ple.pth`、`out/full_sft_h{1,2}_{dim}_ple.pth`（fp16，gitignored）
-- int4 导出：`out/full_sft_h{1,2}_{dim}_int4_g32.pth`（gitignored）
+- int4 导出：`out/full_sft_h{1,2}_{dim}_int4_g32.pth`（gitignored，codes+fp16 scales）
+  - H1 实测 11.5 MB（理论纯 int4 权重 5.4 MB）
+  - H2 实测 26.5 MB（理论纯 int4 权重 12.5 MB）
 
 ### 待办
 
