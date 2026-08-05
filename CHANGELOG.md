@@ -71,8 +71,14 @@
     - Pretrain 1:2（医学:通用）→ `dataset/pretrain_mixed.jsonl`（**369,876 条** / 589.4MB）
     - SFT 1:3 → `dataset/sft_medical_mixed.jsonl`（**56,816 条** / 92.4MB）
   - 三管线均输出质量报告（可重复执行对比）, B2 支持断点续跑
+- **医疗增强训练验证**（H2 PLE, WSL RTX 5080）
+  - 从 `full_sft_h2` 用 `sft_medical_mixed.jsonl`（56,816 条）微调, lr=2e-5, 1 epoch
+  - **7,102 steps, loss 1.7353**（原 full_sft_h2 为 2.04, 医疗数据被吸收）
+  - 权重: `out/full_sft_h2_med_384_ple.pth`（54.8MB, fp16）
+  - **评估结论**: 医学知识提升有限（H2 24.95M 参数容量不足 + 混合数据 75% 通用样本稀释 + B1 模板化问题）。与 esp32-ai 结论一致: 小模型医学能力瓶颈在数据多样性与参数容量, 非训练量
 
 ### 待办
 
-- 医疗混合数据训练验证（`train_pretrain.py --data_path dataset/pretrain_mixed.jsonl`）
-- 医疗 SFT 效果评估（医学问题问答对比）
+- [ ] pretrain 噪声二次清洗（PDF代找广告残留 ~0.8%、超长块 >2000 字符 1.3% 切分）
+- [ ] B1 问题模板规范化（"根据临床指南,【X】的内容要点有哪些" → 自然问句）或优先用 B2
+- [ ] 更大模型（H3 38.16M）医疗增强或纯医学 SFT（不分混合）重试
