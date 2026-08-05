@@ -43,6 +43,13 @@ BLOCKLIST_SUBSTR = [
     '临床技术操作规范 烧伤分册',
     'PDF电子书基地', 'dayo1982', 'QQ461573687', 'QQ1779903665',
     '本人可以帮助你找到你要的PDF', '代找', '每本100%都带可跳转',
+    # 广告/版权页短语 (改进1: 分析发现的残留噪声)
+    '帮助了上万人', '带书签索引', '电子书代找', 'pdf代找', '电子书基地',
+    '因寻找和后期制作pdf', '仅收取代找费用', '版权纠纷', '本人只提供代找',
+    '如因PDF产生的版权', '可以联系我QQ', '网上有很多PDF',
+    # 版权/出版页
+    '版权所有, 翻印必究', '版权所有，翻印必究', '出版时间', '印数', '书号',
+    'ISBN', '在版编目',
 ]
 
 # YAML frontmatter: --- 到 ---
@@ -104,10 +111,18 @@ def clean_markdown(text):
 # ---------------------------------------------------------------------------
 # 分块
 # ---------------------------------------------------------------------------
-def chunk_text(text, min_len=80, max_len=1024, overlap=0):
-    """按段落分块, 目标 512-1024 字符. 短段合并, 超长段按句子切."""
+def _hard_split(text, max_len):
+    """硬切分: 按字符窗口强制切分 (兜底, 用于 >2000 字符的超长块)."""
+    out = []
+    for i in range(0, len(text), max_len):
+        out.append(text[i:i + max_len])
+    return out
+
+
+def chunk_text(text, min_len=80, max_len=1024, overlap=0, hard_max=2000):
+    """按段落分块, 目标 512-1024 字符. 短段合并, 超长段按句子切, 最终兜底硬切."""
     paras = [p.strip() for p in text.split('\n\n') if p.strip()]
-    chunks, cur = [], ''
+    chunks, cur = [], []
 
     def flush():
         nonlocal cur
@@ -137,7 +152,15 @@ def chunk_text(text, min_len=80, max_len=1024, overlap=0):
             flush()
             cur = p
     flush()
-    return chunks
+
+    # 改进1: 兜底硬切 >hard_max 字符的超长块
+    final = []
+    for c in chunks:
+        if len(c) > hard_max:
+            final.extend(_hard_split(c, max_len))
+        else:
+            final.append(c)
+    return final
 
 
 # ---------------------------------------------------------------------------
@@ -147,8 +170,11 @@ def minhash_of(text, num_perm=128):
     """字符级 MinHash (jieba 对超长/特殊文本不稳定, 去重用字符 n-gram 足够)."""
     if len(text) > 5000:
         text = text[:5000]
-    # 用 2-gram 字符 token, 中文去重效果好且无分词崩溃风险
-    tokens = {text[i:i + 2] for i in range(len(text) - 1)}
+    # 用 2-gram 字符 token; 用普通循环避免 set comprehension 在长文本上的闭包异常
+    tokens = set()
+    tlen = len(text)
+    for i in range(tlen - 1):
+        tokens.add(text[i:i + 2])
     mh = MinHash(num_perm=num_perm)
     for t in tokens:
         mh.update(t.encode('utf-8'))
