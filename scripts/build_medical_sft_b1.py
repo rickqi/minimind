@@ -41,6 +41,14 @@ TEMPLATE_RE = re.compile(r'^根据临床指南[,，]\s*(?:【([^】]+)】|(.+?))
 
 def normalize_question(q):
     """将模板化问题重写为自然问句."""
+    # 改进2b: "XX的临床诊疗要点是什么" / "XX的临床诊疗要点有哪些" -> "XX的诊疗要点有哪些?"
+    m_tail = re.match(r'^(.+?)的临床诊疗要点是(什么|有哪些)[？?]?$', q)
+    if m_tail:
+        subject = m_tail.group(1).strip()
+        # 去掉括号序号如 （一）
+        subject = re.sub(r'^[（(][一二三四五六七八九十\d]+[)）]', '', subject).strip()
+        if subject:
+            return f'{subject}的诊疗要点有哪些？'
     m = TEMPLATE_RE.match(q)
     if not m:
         return q
