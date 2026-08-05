@@ -98,6 +98,16 @@
   - 权重: `out/full_sft_h2_pure_384_ple.pth`
   - **结论**: 医学问答未提升且出现灾难性遗忘（过拟合医学格式 + 丢失通用能力）
   - **最终结论确认**: H2 24.95M 参数容量是医学知识**硬瓶颈**——纯 SFT 无法注入医学知识, 小模型需 RAG 或更大模型（与 esp32-ai 结论一致）
+- **路径验证: H3 训练 vs RAG 方案**
+  - **路径1 H3 医疗增强**（`wsl_train_h3_med.sh`, full_sft_h3 + sft_medical_mixed）:
+    - loss 1.56, 但医学问答仍无法达标（38.16M 容量仍不足, 仅高血压/肺癌部分沾边）
+  - **路径2 H1/H2 RAG**（`rag_medical.py` + `build_medical_raft.py` + `wsl_train_h2_raft.sh`）:
+    - **KB 索引**: format_data.jsonl (11K 医学 QA) → **jieba 分词倒排索引** (29,849 terms) + IDF 加权
+    - **检索**: IDF 加权 Top-2 证据注入 ChatML（esp32-ai: Top-1 会退化）
+    - **RAFT 微调**: 8,000 条"证据+问题→答案"自接地数据, H2 微调 3 epochs (loss 1.13)
+    - **验证成功**: 高血压→"收缩压≥140/90mmHg 即可诊断"; 肺癌早期→准确复述症状; 感染性休克→体循环阻力/酸中毒
+    - **结论**: RAG+RAFT 是让小模型用上医学知识的**正确路径**（对比裸模型循环重复/编造）
+  - **最终对比**: 裸模型 < SFT < H3 SFT < **H2+RAG+RAFT**（唯一能给出准确医学标准者）
 
 ### 待办
 
