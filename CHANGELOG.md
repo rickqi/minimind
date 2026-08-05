@@ -115,8 +115,15 @@
 - **ESP32 V5 固件 RAG 链路**（esp32-ai `esp32_llm_zh_v5.ino` + `tools/send_prompt_rag.py`）:
   - 固件修复: ChatML 特殊 token（屏蔽 im_start=1, 停止 endoftext=0/im_end=2）; `MM_MINIMIND` 禁用设备端 char-level RAG
   - PC 端发送器: jieba IDF 检索 (11K QA) → ChatML 证据注入 (≤100 tokens) → 串口 `{"ids":[...]}` → 生成回传
-
+- **H3 混合数据从零训练**（可行性分析推荐方案, 医疗1:2通用）:
+  - 预训练: `pretrain_mixed.jsonl` (386,976 条, 24,186 steps) → loss **2.57** (~17min)
+  - SFT: `sft_medical_mixed.jsonl` (56,808 条, 2 epochs) → loss **1.82** (~12min)
+  - 权重: `out/pretrain_h3_mixed_512_ple.pth` / `out/full_sft_h3_mixed_512_ple.pth`
+  - **评估**: 医学知识有注入（病毒性肝炎→"抗病毒治疗/控制感染"实质正确; 肺癌→咳嗽/咳痰/胸痛/咯血）,
+    但精准度仍不足（高血压无 140/90 数值, 糖尿病有循环）
+  - **结论**: 混合从零训练可行且优于纯通用, 但精准医学问答仍需 RAG+RAFT（两条路径互补）
 
 ### 待办
 
-- [ ] 更大模型（H3 38.16M）医疗增强或纯医学 SFT（不分混合）重试
+- [ ] 混合训练模型 + RAG+RAFT 组合（内在知识 + 检索精准度）
+- [ ] ESP32 实际烧录验证
