@@ -108,6 +108,14 @@
     - **验证成功**: 高血压→"收缩压≥140/90mmHg 即可诊断"; 肺癌早期→准确复述症状; 感染性休克→体循环阻力/酸中毒
     - **结论**: RAG+RAFT 是让小模型用上医学知识的**正确路径**（对比裸模型循环重复/编造）
   - **最终对比**: 裸模型 < SFT < H3 SFT < **H2+RAG+RAFT**（唯一能给出准确医学标准者）
+- **H1/H2 RAG vs 无 RAG 对比评估**（`wsl_eval_rag_compare.sh`, 5 医学问题 × 2 模型 × 2 模式）:
+  - **无 RAG**: H1/H2 全部答错（编造/循环/泛泛）——小模型无外部知识必然失败
+  - **有 RAG**: H1/H2 **均准确复述证据**——H1 (10.79M) 也能给出"咳嗽、咳痰、咳血、胸痛"和"收缩压≥140/90mmHg"
+  - **结论**: RAG 效果决定性, 双模型 RAFT 复述能力都达标（H1 不逊 H2）, 剩余差异仅在 KB 检索精准度
+- **ESP32 V5 固件 RAG 链路**（esp32-ai `esp32_llm_zh_v5.ino` + `tools/send_prompt_rag.py`）:
+  - 固件修复: ChatML 特殊 token（屏蔽 im_start=1, 停止 endoftext=0/im_end=2）; `MM_MINIMIND` 禁用设备端 char-level RAG
+  - PC 端发送器: jieba IDF 检索 (11K QA) → ChatML 证据注入 (≤100 tokens) → 串口 `{"ids":[...]}` → 生成回传
+
 
 ### 待办
 
