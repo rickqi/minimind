@@ -2,6 +2,13 @@
 
 > 本文件记录 MiniMind 项目全部训练模型版本、训练数据、Loss 与部署状态。
 > 更新日期: 2026-08-05 | 与 `docs/MEDICAL_TRAINING.md` 配套
+>
+> 演进摘要:
+> 1. 基础链路 (08-03~04): H1/H2/H3 预训练 → SFT → DPO, 纯通用数据
+> 2. 医疗数据管线 (08-04~05): A/B1/B2/RAFT/混合 5 条管线, 5 个医疗数据集
+> 3. 医疗训练探索 (08-05): 纯医学 SFT (过拟合) → H3 混合从零 (可行) → RAG+RAFT (最优)
+> 4. 组合验证 (08-05): H3混合+RAFT 无显著加成 → 精准问答靠检索, 泛知识靠内在
+> 5. 部署 (08-05): H1/H2 RAFT → ESP32; H3 混合/RAFT → PC (超 ESP32 flash)
 
 ---
 
@@ -54,7 +61,10 @@
 | 医疗增强 | `out/full_sft_h3_med_512_ple.pth` | 82.9MB | sft_medical_mixed | 7,101 | 1.47 → **1.56** |
 | **混合从零预训练** | `out/pretrain_h3_mixed_512_ple.pth` | 82.9MB | pretrain_mixed (387K, 医疗1:2) | 24,186 | 6.81 → **2.57** |
 | **混合 SFT** | `out/full_sft_h3_mixed_512_ple.pth` | 82.9MB | sft_medical_mixed | 7,101×2 | 2.63 → **1.82** |
-| 混合+RAFT | `out/full_sft_h3_mixed_raft_512_ple.pth` | 82.9MB | sft_medical_raft | 1,000×3 | 1.06 → **1.05** |
+| **混合+RAFT** | `out/full_sft_h3_mixed_raft_512_ple.pth` | 82.9MB | sft_medical_raft (8K) | 1,000×3 | 1.06 → **1.05** |
+
+> H3 系列部署产物: `models/full_sft_h3_mixed_raft_h512_ple1.bin` (22.69MB PLE1) →
+> `model_v5/H3-raft/model_llm.bin` (21.64MB, verify PASS)。H3 超 ESP32 flash, 适用于 PC/树莓派。
 
 ---
 
@@ -118,8 +128,17 @@ out/rag_index.pkl              jieba 医学检索索引 (11K docs)
 | **H2 RAFT v3** | ✅ | ⚠️ | ✅ **RAG 证据复述** | ESP32 model_llm.bin |
 | **H1 RAFT** | ✅ | ⚠️ | ✅ RAG (轻量) | ESP32 model_llm.bin |
 | **H3 混合** | ✅ | ✅ 内在知识 | ❌ 无检索不精准 | PC |
-| H3 混合+RAFT | ✅ | ✅ | ⚠️ 组合无加成 | 实验 |
+| H3 混合+RAFT | ✅ | ✅ | ⚠️ 组合无加成 | PC (超 ESP32 flash) |
 | H2 纯医学 | ❌ 遗忘 | ⚠️ | ❌ 过拟合 | 实验 |
+
+### ESP32 烧录状态总览
+
+| 模型 | model_llm.bin | ESP32 flash 分区 (14.5MB) | 状态 |
+|---|---|---|---|
+| **H1 RAFT** | 6.31MB | ✅ 可烧录 | 就绪 |
+| **H2 RAFT** | 14.73MB | ✅ 可烧录 (余量小) | 就绪 |
+| H3 混合 | 21.64MB | ❌ 超限 | PC 部署 |
+| H3 混合+RAFT | 21.64MB | ❌ 超限 | PC 部署 |
 
 ### 已验证结论
 
