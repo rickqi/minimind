@@ -30,8 +30,15 @@ import jieba
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KB_PATH = os.path.join(PROJECT_ROOT, '..', 'esp32-ai', 'data_v4', 'kb', 'format_data.jsonl')
 INDEX_PATH = os.path.join(PROJECT_ROOT, 'out', 'rag_index.pkl')
+MED_DICT_PATH = os.path.join(PROJECT_ROOT, 'out', 'medical_jieba.txt')
 DOC_CHARS = 60  # 证据截断长度 (esp32-ai P2 发现: 仅答案, 短截断)
 IDF_SCALE = 64.0
+NON_MEDICAL_KW = ['健康管理', '理赔', '产品条款', '销售', '消保']
+
+
+def is_medical_label(label):
+    """判断 KB 条目是否为医学 (排除保险/健康管理域)."""
+    return not any(k in label for k in NON_MEDICAL_KW)
 
 
 def terms_of(text):
@@ -41,6 +48,16 @@ def terms_of(text):
     stop = set('的了是在和有就不都而及与或一个中其') | set('，。、；：！？""''（）【】\n \t')
     toks = [t for t in toks if t not in stop and not t.isspace()]
     return set(toks)
+
+
+def load_medical_dict():
+    """加载医学词典 (jieba userdict, 优化3b: 提升医学术语分词精准度)."""
+    if os.path.exists(MED_DICT_PATH):
+        try:
+            jieba.load_userdict(MED_DICT_PATH)
+            print(f'[jieba] 加载医学词典: {MED_DICT_PATH}')
+        except Exception as e:
+            print(f'[jieba] 词典加载失败: {e}')
 
 
 def build_index(entries):
@@ -74,16 +91,20 @@ def retrieve(query, doclists, docs, idf, k=3):
     return top, sc
 
 
-def load_kb():
+def load_kb(med_only=False):
     entries = []
     with open(KB_PATH, 'r', encoding='utf-8') as f:
         for line in f:
             d = json.loads(line)
             entries.append((d.get('question', ''), d.get('answer', ''), d.get('label', '')))
+    if med_only:
+        entries = [e for e in entries if is_medical_label(e[2])]
     return entries
 
 
 def cmd_build():
+    import argparse
+    load_medical_dict()
     print(f'加载 KB: {KB_PATH}')
     entries = load_kb()
     docs, inverted, idf = build_index(entries)
