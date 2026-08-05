@@ -67,17 +67,22 @@
 | **H2 RAFT** | `model_v5/H2/model_llm.bin` | **14.73MB** | ✅ PASS (diff 0.00001) | ESP32 精准医学问答 |
 | H2 参考 | `model_v5/H2/model.bin` | 14.07MB | — | PLE1 原始格式 |
 | H3 混合 (参考) | `model_v5/H3/model_llm.bin` | 21.64MB | ✅ PASS (diff 0.00001) | ⚠️ 超 ESP32 flash, PC 部署 |
+| H3 混合+RAFT (参考) | `model_v5/H3-raft/model_llm.bin` | 21.64MB | ✅ PASS (diff 0.00001) | ⚠️ 超 ESP32 flash, PC 部署 |
 
 ### H3 混合量化导出产物 (minimind/models/)
 
 | 文件 | 大小 | 说明 |
 |---|---|---|
-| `full_sft_h3_mixed_h512_ple1.bin` | 22.69MB | PLE1 (GQA→MHA, 117 tensors) |
+| `full_sft_h3_mixed_h512_ple1.bin` | 22.69MB | PLE1 (混合 SFT, 无 RAFT) |
 | `full_sft_h3_mixed_512_int4_g32.pth` | 40.6MB | int4 量化 (deg +0.0305) |
-| `full_sft_h3_mixed_h512_golden.npz/.txt` | — | golden 参考 |
+| `full_sft_h3_mixed_raft_h512_ple1.bin` | 22.69MB | PLE1 (**含 RAFT**, loss 1.05) |
+| `full_sft_h3_mixed_raft_512_int4_g32.pth` | 40.6MB | int4 量化 (RAFT 版) |
+| `full_sft_h3_mixed_h512_golden.npz/.txt` | — | golden 参考 (混合 SFT) |
+| `full_sft_h3_mixed_raft_h512_golden.npz/.txt` | — | golden 参考 (RAFT) |
 
 > ⚠️ **部署限制**: H3 (38.16M) model_llm.bin 21.64MB 超出 ESP32-S3 model 分区 (14.5MB, 16MB flash 上限)。
 > H3 混合量化模型适用于 **PC/树莓派/大 flash 板卡**; ESP32 仅支持 H1 (6.31MB) / H2 (14.73MB)。
+> 注: 早期导出的 H3 (21.64MB) 为**混合 SFT 版 (无 RAFT)**; 本文件已补充 **H3 混合+RAFT 版**。
 
 配套部署资产:
 ```
