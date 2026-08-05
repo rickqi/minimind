@@ -38,19 +38,24 @@ def load_kb():
 def build_raft_data(out_path, max_samples=8000, seed=42, no_evidence_ratio=0.3):
     """构建 RAFT 数据.
     no_evidence_ratio: 无证据样本比例 (保留模型内在知识问答能力, 防 RAFT 遗忘).
+    证据格式 (v3, 修复 E2 分布):
+      E1 = 正确答案 answer[:60]  (自接地, 模拟检索 Top-1 命中)
+      E2 = 随机其他条目 answer[:60]  (干扰项, 模拟真实 Top-2 检索的无关文档)
+    修复前 E2 = 同答案 answer[60:120] (续接), 与推理分布不匹配.
     """
     import random
     rng = random.Random(seed)
 
     entries = load_kb()
-    # esp32-ai build_raft.py 核心: 证据 = 同条目答案切片 (自接地, 无需检索)
-    # E1 = answer[:60], E2 = answer[60:120]
+    # 候选: 答案足够长的条目
     cands = []
     for i, (q, a, label) in enumerate(entries):
         if a and len(a) >= 40:
             cands.append(i)
     rng.shuffle(cands)
     cands = cands[:max_samples]
+    # 干扰池: 所有答案 (E2 随机采样源)
+    all_answers = [a[:60] for q, a, label in entries if a]
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     n = 0
@@ -63,7 +68,8 @@ def build_raft_data(out_path, max_samples=8000, seed=42, no_evidence_ratio=0.3):
                 ev = ''
                 n_ne += 1
             else:
-                e1, e2 = a[:60], a[60:120]
+                e1 = a[:60]                     # 正确答案前缀 (Top-1 命中)
+                e2 = rng.choice(all_answers)    # 随机干扰项 (模拟 Top-2 无关文档)
                 ev = f'{e1}\n{e2}'
             if ev:
                 user_content = f'参考资料：\n{ev}\n\n问题：{q}'
