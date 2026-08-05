@@ -35,7 +35,10 @@ def load_kb():
     return entries
 
 
-def build_raft_data(out_path, max_samples=8000, seed=42):
+def build_raft_data(out_path, max_samples=8000, seed=42, no_evidence_ratio=0.3):
+    """构建 RAFT 数据.
+    no_evidence_ratio: 无证据样本比例 (保留模型内在知识问答能力, 防 RAFT 遗忘).
+    """
     import random
     rng = random.Random(seed)
 
@@ -51,19 +54,29 @@ def build_raft_data(out_path, max_samples=8000, seed=42):
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     n = 0
+    n_ne = 0
     with open(out_path, 'w', encoding='utf-8') as f:
-        for i in cands:
+        for idx, i in enumerate(cands):
             q, a, label = entries[i]
-            e1, e2 = a[:60], a[60:120]
-            ev = f'{e1}\n{e2}'
+            # 按 no_evidence_ratio 概率生成无证据样本 (防 RAFT 遗忘内在知识)
+            if rng.random() < no_evidence_ratio:
+                ev = ''
+                n_ne += 1
+            else:
+                e1, e2 = a[:60], a[60:120]
+                ev = f'{e1}\n{e2}'
+            if ev:
+                user_content = f'参考资料：\n{ev}\n\n问题：{q}'
+            else:
+                user_content = q
             conv = [
                 {'role': 'system', 'content': '你是一个医学助手，请根据提供的参考资料准确回答问题。'},
-                {'role': 'user', 'content': f'参考资料：\n{ev}\n\n问题：{q}'},
+                {'role': 'user', 'content': user_content},
                 {'role': 'assistant', 'content': a},
             ]
             f.write(json.dumps({'conversations': conv}, ensure_ascii=False) + '\n')
             n += 1
-    print(f'[done] {out_path}: {n} RAFT samples', flush=True)
+    print(f'[done] {out_path}: {n} RAFT samples ({n_ne} no-evidence, {100*n_ne/max(n,1):.0f}%)', flush=True)
     return n
 
 
@@ -71,5 +84,7 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser(description='构建 RAFT 微调数据')
     ap.add_argument('--out', default=os.path.join(PROJECT_ROOT, 'dataset', 'sft_medical_raft.jsonl'))
     ap.add_argument('--max-samples', type=int, default=8000)
+    ap.add_argument('--no-evidence-ratio', type=float, default=0.3,
+                    help='无证据样本比例 (防 RAFT 遗忘内在知识, 默认 0.3)')
     args = ap.parse_args()
-    build_raft_data(args.out, args.max_samples)
+    build_raft_data(args.out, args.max_samples, no_evidence_ratio=args.no_evidence_ratio)
