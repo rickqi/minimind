@@ -3,6 +3,13 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **RAG 索引修复** (2026-08-06)
+  - `rag_medical.py`: `cmd_build` 加 `med_only=True` 医学过滤 (索引 11000→5891 docs, 排除 46.4% 健康管理/理赔/销售噪声)
+  - `rag_medical.py`: `cmd_query`/`cmd_chat` 补 `load_medical_dict()` (查询分词与建库一致)
+  - 重建 `out/rag_index.pkl` (5891 docs, 21656 terms, 当前医学词典)
+  - 修复效果: "上消化道出血"/"不孕不育" 由无匹配 → 精准命中 (卫健委规范/妇产科)
+  - 已知: "肝豆状核变性" 无匹配因 KB 数据源无此病种条目 (0 条), 非代码问题
+  - `esp32-ai/tools/send_prompt_rag.py`: 补 jieba 医学词典加载 + med_only 过滤 (部署路径与评估路径对齐)
 - **H1 RAFT v4** | `out/full_sft_h1_raft_v4_256_ple.pth` | 24.88MB | sft_medical_raft (8K, 负样本10%+医学过滤) | 1,000×3 | **2.90**
   - 说明: 从 `full_sft_h1` 续训 (v4 增强数据); 评估 3/3 PASS (肺癌精准复述/高血压证据跟随/自我介绍盲引修复); 旧 H1 RAFT (v3 数据, loss 1.21) 保留为 `full_sft_h1_raft_256_ple.pth`
   - 部署: PLE1 `models/full_sft_h1_raft_v4_h256_ple1.bin` (6.31MB) → `../esp32-ai/firmware/model_v5/H1/model_llm.bin` (6.31MB) | verify PASS diff 0.00000
