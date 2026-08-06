@@ -9,6 +9,9 @@
   - `out/mix_report.json` → `out/medical_mix_report.json` (对齐 §输出路径规划 `{pipeline}_report.json` 规范), `scripts/mix_medical.py` 输出路径同步
   - `docs/MODELS.md` 全面更新: H2 系列表补 **RAFT v4** 行; 部署表 H2 标注 v4; H3/H3-raft `model_llm.bin` 大小修正 21.64 → **22.69MB**; 能力矩阵/复现命令 v3 → v4
   - 新增分层知识库: `scripts/AGENTS.md` (驱动层) + `trainer/AGENTS.md` (训练引擎契约)
+- **修复: PLE 权重后缀缺陷** (trainer)
+  - 5 个脚本 (`train_grpo.py` / `train_ppo.py` 两处 / `train_agent.py` / `train_lora.py` / `train_distillation.py`) 内联 `moe_suffix` 缺 `_ple` 分支 → 统一改为调用 `trainer_utils._model_suffix(lm_config)`
+  - 修复后 PLE+RL/LoRA/蒸馏 的 `out/` 权重命名与 `init_model` 加载一致, `--from_weight` 续训不再 FileNotFoundError
 
 
 

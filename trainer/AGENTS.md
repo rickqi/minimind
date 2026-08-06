@@ -52,12 +52,12 @@ import datasets  # noqa: F401  # Windows pyarrow/torch DLL 冲突规避
 - `--from_weight` 加载 out/ 半精度权重; `--from_resume` 加载 checkpoints/ 完整训练态(跨 GPU 自动按 world_size 缩放 step)
 - 保存前须 `getattr(raw_model, '_orig_mod', raw_model)` 解包 torch.compile
 
-## 5. ⚠️ 已知缺陷: 5 个脚本缺 PLE 后缀
+## 5. ✅ 权重后缀约定 (已统一, 2026-08-06 修复)
 
-- ✅ PLE 感知: `train_pretrain.py` `train_full_sft.py` `train_dpo.py`
-- ❌ PLE 盲(仅 `_moe`): `train_grpo.py` `train_ppo.py` `train_agent.py` `train_lora.py` `train_distillation.py`
-
-**后果**: 对 PLE 模型跑 GRPO/PPO/Agent/LoRA/蒸馏, 会存出 `out/grpo_768.pth`(无 `_ple`), 而 `init_model` 找 `grpo_768_ple.pth` → `--from_weight` 续训 FileNotFoundError; `--from_resume` 不受影响(lm_checkpoint 用 `_model_suffix` 正确)。当前医疗管线只用 pretrain+SFT+RAFT, 不受影响; **PLE+RL 暂不支持**, 除非修复这 5 处内联后缀。
+- **单一事实来源**: 所有脚本统一调用 `trainer_utils._model_suffix(lm_config)` (不再内联复制后缀逻辑)。
+- 后缀优先级 `_ple` > `_moe` > (无); 三态已验证: dense→`''`, moe→`_moe`, ple→`_ple`。
+- 覆盖全部 8 个训练脚本的 `out/` 保存路径: pretrain / full_sft / dpo / grpo / ppo(两处) / agent / lora / distillation。
+- **历史缺陷 (已修复)**: 此前 grpo/ppo/agent/lora/distillation 内联 `moe_suffix = '_moe' if ... else ''` 缺 `_ple` 分支, 会导致 PLE 权重存为无后缀名而 `init_model` 查找 `_ple` 名 → `--from_weight` 续训 FileNotFoundError; `--from_resume` 不受影响 (lm_checkpoint 一直用 `_model_suffix`)。
 
 ## 6. RL 专属约定
 
