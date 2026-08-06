@@ -3,6 +3,13 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **SD 索引 v3 决策: 11K 医学成品** (2026-08-06, esp32-ai 侧)
+  - `build_sd_index.py` v3: 优先读 format_data.jsonl (11K 100% 医学成品), 回退 V3+guides
+  - **对比实测 (统一 10 查询)**: v3 (11K) **90% > v2 (113K) 80%** — 肝豆状核/白疕 由误配(梅核气/白癜风)转精准命中
+  - Oracle 建议成立: 精度>召回 (format_data.jsonl 病种覆盖修复后是高精度医学数据)
+  - 重建 `data_v4/sd_rag/` (10,999 docs, 3.9MB): index 2.46MB + docs 1.40MB + meta 14.7KB
+  - 部署: 三文件拷入 SD 卡 `/sdcard/rag/` 供 `esp32_llm_v5_idf` 离线 RAG 使用
+  - esp32-ai commit `df8c9ef`; `docs/MODELS.md` + `RAG_INDEX_ANALYSIS` 同步更新
 - **RAG 索引文档更新** (2026-08-06)
   - `esp32-ai/docs/RAG_INDEX_ANALYSIS_20260806.md` 全面更新为权威 RAG 说明文档 (commit `d5a05cd`)
     - §1 总览: Index B 更新为重建后状态 (113,609 docs, 47.5MB)

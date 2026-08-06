@@ -106,19 +106,20 @@ out/rag_index.pkl              jieba 医学检索索引 (11K docs, PC 评估用)
 models/full_sft_h2_raft_v4_h384_ple1.bin  H2 RAFT v4 PLE1 (14.73MB)
 ```
 
-### SD 卡全量索引 (esp32 离线 RAG 部署产物, 2026-08-06 医学过滤重建)
+### SD 卡全量索引 (esp32 离线 RAG 部署产物, 2026-08-06 v3 医学成品)
 
 > 供 `esp32_llm_v5_idf` 固件直接消费。固件从 `/sdcard/rag/` 读取三文件, 拷入 SD 卡同名目录即可。
+> v3 版: 用 `format_data.jsonl` (11K 100% 医学成品) 构建 — 精度>召回, 10 查询对比实测 90% > 113K 广谱 80%。
 
 | 文件 | 大小 | 说明 |
 |---|---|---|
-| `esp32-ai/data_v4/sd_rag/index.bin` | 32.17MB | 单字倒排 term 表 + u32 doclist (4813 terms) |
-| `esp32-ai/data_v4/sd_rag/docs.bin` | 15.35MB | 证据文本 + label (113,609 docs) |
-| `esp32-ai/data_v4/sd_rag/meta.bin` | 23.8KB | 单字 → u8 IDF 表 |
+| `esp32-ai/data_v4/sd_rag/index.bin` | 2.46MB | 单字倒排 term 表 + u32 doclist (3053 terms) |
+| `esp32-ai/data_v4/sd_rag/docs.bin` | 1.40MB | 证据文本 + label (10,999 docs) |
+| `esp32-ai/data_v4/sd_rag/meta.bin` | 14.7KB | 单字 → u8 IDF 表 |
 
 **部署到 esp32**: 三文件复制到 SD 卡 `/sdcard/rag/` 目录 (FAT32), 固件 `rag_sd.h` 启动时自动加载。
-**数据**: V3 KB (93,556 医学) + 临床指南全量 (医学过滤), 113,609 docs。
-**质量**: 肺癌/宫外孕/酮症酸中毒精准; 肝豆状核/白疕 有单字倒排结构性误配 (字符级局限)。
+**数据**: `format_data.jsonl` 医学成品 (10,999 docs, 100% 医学, 含肝豆状核/白疕等修复病种)。
+**质量**: 10 查询 Top-1 相关率 **90%** (肝豆状核/白疕精准命中); 高血压检索偏呼吸衰竭 (单字倒排局限)。
 **注意**: `esp32_llm_zh_v5` (MM_MINIMIND) 设备端 RAG 为死代码, 此索引仅供 `esp32_llm_v5_idf` (离线 RAG 固件) 使用。
 
 ---
