@@ -54,7 +54,7 @@ exec python3 -u train_<X>.py --use_ple 1 --ple_dim {96|128} \
 | `export_ple1.py` | `out/{w}_{dim}_ple.pth` | `models/{w}_h{dim}_ple1.bin` + golden | int4 group=32; GQA→MHA `repeat_interleave(2)`; golden **必须来自反量化模型** |
 | `quantize_ple.py` | `out/{w}_{dim}_ple.pth` | `models/{w}_{dim}_int4_g32.pth` | **group=32 硬约束** (128 崩, 16 过拟合) |
 | `gen_vocab_minimind.py` | `model/tokenizer.json` | `../esp32-ai/firmware/.../vocab.h` | 用 bytes 逆映射生成原始 UTF-8 字节 |
-| `rag_medical.py` | `../esp32-ai/data_v4/kb/format_data.jsonl` | `out/rag_index.pkl` (build) | 子命令 build/query/chat |
+| `rag_medical.py` | `../esp32-ai/data_v4/kb/format_data.jsonl` | `out/rag_index.pkl` (build) | 子命令 build/query/chat; build **必须 med_only=True** (排除保险/健康管理标签); 修改后须重建索引 |
 | `register_model.py` | 文件路径参数 | 追加 `docs/MODELS.md` + `CHANGELOG.md` | 模型输出后**必跑** (见根 AGENTS.md §模型输出规范) |
 
 ## 5. 陷阱速查
@@ -64,3 +64,7 @@ exec python3 -u train_<X>.py --use_ple 1 --ple_dim {96|128} \
 3. 评估脚本 (B 类) 是非参数化 heredoc, 权重名/问题集写死, 不可复用; 可复用入口只有 `rag_medical.py`。
 4. 输出目录 `out/ models/ checkpoints/` 全部 gitignored, 产物靠 register_model.py 登记追踪。
 5. `_ple` 后缀: 所有 PLE 权重为 `{name}_{dim}_ple.pth`, 导出物对应 `_h{dim}_ple1.bin` / `_int4_g32.pth`。
+6. **RAG 索引新鲜度**: `rag_index.pkl` 是 build 时快照, 依赖 `medical_jieba.txt` 当前版本。词典/过滤逻辑变更后**必须重建** (`python scripts/rag_medical.py build`), 否则 57% 医学术语检索失败 (实测: 肝豆状核变性/上消化道出血/不孕不育 曾全 miss)。
+7. **RAG 检索一致性 (部署=评估)**: PC 端 `rag_medical.py` 与 ESP32 部署侧 `esp32-ai/tools/send_prompt_rag.py` **必须同样加载医学词典 + med_only 过滤**, 否则设备端 Top-2 召回与评估结论不一致。
+8. **IDF cap=255 是 ESP32 uint8 硬约束**: `64·log(1+N/df)` 在 5891 docs 下 98.3% 词饱和, 但加法打分下对排序近乎无影响 (实测 18 查询 Top-2 仅 2 例 cosmetically 变化)。**不要为"提升区分度"移除 cap** — 真正区分度杠杆是 TF/BM25 或 jieba 分词修复 (如 酮症 OOV), 不是 cap。
+9. **KB 数据源缺口**: `format_data.jsonl` 有 3 个真缺失病种 (肝豆状核变性/戊肝/网球肘, KB 0 条, 但源 md 文件有数据) — 根因是 `build_guide_kb.py` 的 RE_CLINICAL_HEAD 正则误杀纯病名标题 (不含 病/炎/癌/瘤 后缀)。数据补充走 esp32-ai 侧, 需同时满足 11000 条 ESP32 2MB 配额。
