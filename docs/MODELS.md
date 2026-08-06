@@ -74,8 +74,8 @@
 
 | 模型 | 文件 | 大小 | verify | 用途 |
 |---|---|---|---|---|
-| **H1 RAFT v3** | `model_v5/H1/model_llm.bin` | **6.31MB** | ✅ PASS (diff 0.00000) | ESP32 轻量医学问答 (⚠️ v4 权重已训练, 待重新导出) |
-| H1 参考 | `model_v5/H1/model.bin` | 6.09MB | — | PLE1 原始格式 |
+| **H1 RAFT v4** | `model_v5/H1/model_llm.bin` | **6.31MB** | ✅ PASS (diff 0.00000) | ESP32 轻量医学问答 |
+| H1 参考 | `model_v5/H1/model.bin` | 6.31MB | — | PLE1 原始格式 (v4) |
 | **H2 RAFT v4** | `model_v5/H2/model_llm.bin` | **14.73MB** | ✅ PASS (diff 0.00001) | ESP32 精准医学问答 |
 | H2 参考 | `model_v5/H2/model.bin` | 14.07MB | — | PLE1 原始格式 |
 | H3 混合 (参考) | `model_v5/H3/model_llm.bin` | 22.69MB | ✅ PASS (diff 0.00001) | ⚠️ 超 ESP32 flash, PC 部署 |
@@ -129,7 +129,7 @@ models/full_sft_h2_raft_v4_h384_ple1.bin  H2 RAFT v4 PLE1 (14.73MB)
 | 模型 | 通用对话 | 泛医学知识 | 精准医学问答 | 部署 |
 |---|---|---|---|---|
 | **H2 RAFT v4** | ✅ | ⚠️ | ✅ **RAG 证据复述** (盲引修复) | ESP32 model_llm.bin |
-| **H1 RAFT** | ✅ | ⚠️ | ✅ RAG (轻量) | ESP32 model_llm.bin |
+| **H1 RAFT v4** | ✅ | ⚠️ | ✅ RAG (轻量) | ESP32 model_llm.bin |
 | **H3 混合** | ✅ | ✅ 内在知识 | ❌ 无检索不精准 | PC |
 | H3 混合+RAFT | ✅ | ✅ | ⚠️ 组合无加成 | PC (超 ESP32 flash) |
 | H2 纯医学 | ❌ 遗忘 | ⚠️ | ❌ 过拟合 | 实验 |
@@ -138,7 +138,7 @@ models/full_sft_h2_raft_v4_h384_ple1.bin  H2 RAFT v4 PLE1 (14.73MB)
 
 | 模型 | model_llm.bin | ESP32 flash 分区 (14.5MB) | 状态 |
 |---|---|---|---|
-| **H1 RAFT** | 6.31MB | ✅ 可烧录 | 就绪 |
+| **H1 RAFT v4** | 6.31MB | ✅ 可烧录 | 就绪 |
 | **H2 RAFT v4** | 14.73MB | ✅ 可烧录 (余量小) | 就绪 |
 | H3 混合 | 22.69MB | ❌ 超限 | PC 部署 |
 | H3 混合+RAFT | 22.69MB | ❌ 超限 | PC 部署 |
@@ -213,3 +213,4 @@ python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 - **H2 RAFT v4** | `out/full_sft_h2_raft_v4_384_ple.pth` | 54.85MB | sft_medical_raft (8K, 负样本+医学过滤) | - | **2.70**
 -   说明: PLE1: `models/full_sft_h2_raft_v4_h384_ple1.bin` (14.73MB) | int4: `models/full_sft_h2_raft_v4_384_int4_g32.pth` (26.58MB) | 部署: `../esp32-ai/firmware/model_v5/H2/model_llm.bin` (14.73MB) | verify PASS diff 0.00001
 - **H1 RAFT v4** | `out/full_sft_h1_raft_v4_256_ple.pth` | 24.88MB | sft_medical_raft (8K, 负样本+医学过滤) | - | **2.90**
+  - 说明: PLE1: `models/full_sft_h1_raft_v4_h256_ple1.bin` (6.31MB) | 部署: `../esp32-ai/firmware/model_v5/H1/model_llm.bin` (6.31MB) | verify PASS diff 0.00000

@@ -5,6 +5,7 @@
 ## [Unreleased]
 - **H1 RAFT v4** | `out/full_sft_h1_raft_v4_256_ple.pth` | 24.88MB | sft_medical_raft (8K, 负样本10%+医学过滤) | 1,000×3 | **2.90**
   - 说明: 从 `full_sft_h1` 续训 (v4 增强数据); 评估 3/3 PASS (肺癌精准复述/高血压证据跟随/自我介绍盲引修复); 旧 H1 RAFT (v3 数据, loss 1.21) 保留为 `full_sft_h1_raft_256_ple.pth`
+  - 部署: PLE1 `models/full_sft_h1_raft_v4_h256_ple1.bin` (6.31MB) → `../esp32-ai/firmware/model_v5/H1/model_llm.bin` (6.31MB) | verify PASS diff 0.00000
 - **H2 RAFT v4** | `out/full_sft_h2_raft_v4_384_ple.pth` | 54.85MB | sft_medical_raft (8K, 负样本+医学过滤) | - | **2.70**
   - 说明: PLE1: `models/full_sft_h2_raft_v4_h384_ple1.bin` (14.73MB) | int4: `models/full_sft_h2_raft_v4_384_int4_g32.pth` (26.58MB) | 部署: `../esp32-ai/firmware/model_v5/H2/model_llm.bin` (14.73MB) | verify PASS diff 0.00001
 - **产物规范化 + 文档更新** (2026-08-06)
