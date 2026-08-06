@@ -3,6 +3,12 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **SD 卡全量索引医学过滤重建** (2026-08-06, esp32-ai 侧)
+  - `build_sd_index.py` 对齐医学过滤 (is_medical_label + RE_CLINICAL_HEAD + doc_label + body≥40)
+  - 重建 `data_v4/sd_rag/` (113,609 docs, 47.5MB): index 32.17MB + docs 15.35MB + meta 23.8KB
+  - 部署: 三文件拷入 SD 卡 `/sdcard/rag/` 即可供 `esp32_llm_v5_idf` 离线 RAG 使用
+  - 质量: 肺癌/宫外孕/酮症酸中毒精准; 肝豆状核/白疕 单字倒排结构性误配 (字符级局限)
+  - `docs/MODELS.md` 登记 SD 索引产物 + 部署说明
 - **KB 病种覆盖修复** (2026-08-06, esp32-ai 侧)
   - `build_guide_kb.py`: 正则加 `变性/肝豆状核/黄斑变性` + 长度下限 80→40 + `is_medical_label` 过滤 (KB 100% 医学)
   - 效果: 肝豆状核变性 0→4 条, 戊型肝炎 0→1 条, 肱骨外上髁 0→2 条, 视网膜色素变性 6 条; PC 索引同步重建后检索命中
