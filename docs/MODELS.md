@@ -202,3 +202,10 @@ bash scripts/wsl_eval_raft_v3.sh        # RAFT v3 问答
 python scripts/export_ple1.py --weight full_sft_h2_raft_v3  # PLE1 导出
 python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 ```
+
+---
+
+## 九、最近模型登记 (自动)
+
+- **H2 RAFT v4** | `out/full_sft_h2_raft_v4_384_ple.pth` | 54.85MB | sft_medical_raft (8K, 负样本+医学过滤) | - | **2.70**
+-   说明: PLE1: `models/full_sft_h2_raft_v4_h384_ple1.bin` (14.73MB) | int4: `models/full_sft_h2_raft_v4_384_int4_g32.pth` (26.58MB) | 部署: `../esp32-ai/firmware/model_v5/H2/model_llm.bin` (14.73MB) | verify PASS diff 0.00001
