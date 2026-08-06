@@ -35,7 +35,8 @@
 | 预训练 | `out/pretrain_h1_256_ple.pth` | 24.9MB | pretrain_t2t_mini (1.27M条) | 79,390 | 7.10 → **2.27** |
 | SFT | `out/full_sft_h1_256_ple.pth` | 24.9MB | sft_t2t_mini (905K条) | 113,215 | 2.76 → **2.04** |
 | DPO | `out/dpo_h1_256_ple.pth` | 24.9MB | dpo.jsonl (17K对) | 4,292 | 0.66 → **0.51** |
-| **RAFT** | `out/full_sft_h1_raft_256_ple.pth` | 24.9MB | sft_medical_raft (8K条) | 1,000×3 | 1.30 → **1.21** |
+| **RAFT v3** | `out/full_sft_h1_raft_256_ple.pth` | 24.9MB | sft_medical_raft (8K条, 旧数据) | 1,000×3 | 1.30 → **1.21** |
+| **RAFT v4** | `out/full_sft_h1_raft_v4_256_ple.pth` | 24.9MB | sft_medical_raft (8K, 负样本10%+医学过滤) | 1,000×3 | → **2.90** |
 
 ---
 
@@ -73,7 +74,7 @@
 
 | 模型 | 文件 | 大小 | verify | 用途 |
 |---|---|---|---|---|
-| **H1 RAFT** | `model_v5/H1/model_llm.bin` | **6.31MB** | ✅ PASS (diff 0.00000) | ESP32 轻量医学问答 |
+| **H1 RAFT v3** | `model_v5/H1/model_llm.bin` | **6.31MB** | ✅ PASS (diff 0.00000) | ESP32 轻量医学问答 (⚠️ v4 权重已训练, 待重新导出) |
 | H1 参考 | `model_v5/H1/model.bin` | 6.09MB | — | PLE1 原始格式 |
 | **H2 RAFT v4** | `model_v5/H2/model_llm.bin` | **14.73MB** | ✅ PASS (diff 0.00001) | ESP32 精准医学问答 |
 | H2 参考 | `model_v5/H2/model.bin` | 14.07MB | — | PLE1 原始格式 |
@@ -211,3 +212,4 @@ python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 
 - **H2 RAFT v4** | `out/full_sft_h2_raft_v4_384_ple.pth` | 54.85MB | sft_medical_raft (8K, 负样本+医学过滤) | - | **2.70**
 -   说明: PLE1: `models/full_sft_h2_raft_v4_h384_ple1.bin` (14.73MB) | int4: `models/full_sft_h2_raft_v4_384_int4_g32.pth` (26.58MB) | 部署: `../esp32-ai/firmware/model_v5/H2/model_llm.bin` (14.73MB) | verify PASS diff 0.00001
+- **H1 RAFT v4** | `out/full_sft_h1_raft_v4_256_ple.pth` | 24.88MB | sft_medical_raft (8K, 负样本+医学过滤) | - | **2.90**
