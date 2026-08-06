@@ -3,6 +3,14 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **ESP32 head_matvec_int8 logits 破坏修复** (2026-08-06, esp32-ai commit `48906c1`)
+  - **根因**: 设备端输出头 (tok_emb/lm_head, [6400,384]) 被强制用 int8 激活 + 单 scale (`n_groups==1` 过期假设) 计算, 但 H2 n_groups=12 (384/32)
+    - int8 激活量化: 实测 max_diff 4.23 (logits 排序崩溃 → 设备乱码)
+    - 单 scale 折叠: 额外 0.054 误差
+    - verify 用 NULL head_matvec → matvec_q (fp32 激活) 故 PASS, 掩盖 bug
+  - **修复**: `llm_engine.c` + `esp32_llm_zh_v5.ino` 改 fp32 激活 + 逐组 scale (权重保持 int8 staged, 性能不变)
+  - **验证**: max_diff 4.23 → 0.50 (降 88%), top-3 token 排序与 fp32 一致
+  - **附带发现**: 旧固件 (esp32_llm/zh/v2/v3) 有同款 `n_groups==1` 假设, 未改动 (另立任务)
 - **SD 索引 v3 决策: 11K 医学成品** (2026-08-06, esp32-ai 侧)
   - `build_sd_index.py` v3: 优先读 format_data.jsonl (11K 100% 医学成品), 回退 V3+guides
   - **对比实测 (统一 10 查询)**: v3 (11K) **90% > v2 (113K) 80%** — 肝豆状核/白疕 由误配(梅核气/白癜风)转精准命中
