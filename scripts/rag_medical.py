@@ -106,7 +106,7 @@ def cmd_build():
     import argparse
     load_medical_dict()
     print(f'加载 KB: {KB_PATH}')
-    entries = load_kb()
+    entries = load_kb(med_only=True)  # 医学过滤: 排除健康管理/理赔/产品条款/销售/消保
     docs, inverted, idf = build_index(entries)
     os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
     with open(INDEX_PATH, 'wb') as f:
@@ -127,6 +127,7 @@ def cmd_build():
 
 
 def cmd_query(query):
+    load_medical_dict()  # 查询分词与建库一致
     with open(INDEX_PATH, 'rb') as f:
         data = pickle.load(f)
     docs, inverted, idf = data['docs'], data['inverted'], data['idf']
@@ -139,6 +140,7 @@ def cmd_query(query):
 
 def cmd_chat(query, hidden_size=384, n_layers=8, ple_dim=128, weight='full_sft_h2'):
     """检索 + 证据注入 + 生成 (ChatML 模板)."""
+    load_medical_dict()  # 查询分词与建库一致
     import torch
     from model.model_minimind import MiniMindConfig, MiniMindForCausalLM
     from transformers import AutoTokenizer
