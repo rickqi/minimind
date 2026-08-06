@@ -20,7 +20,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from model.model_minimind import MiniMindConfig, MiniMindForCausalLM
 from dataset.lm_dataset import RLAIFDataset
-from trainer.trainer_utils import Logger, is_main_process, lm_checkpoint, init_distributed_mode, setup_seed, SkipBatchSampler, init_model, LMForRewardModel
+from trainer.trainer_utils import Logger, is_main_process, lm_checkpoint, init_distributed_mode, setup_seed, SkipBatchSampler, init_model, LMForRewardModel, _model_suffix
 from trainer.rollout_engine import create_rollout_engine
 
 warnings.filterwarnings('ignore')
@@ -286,8 +286,7 @@ def ppo_train_epoch(epoch, loader, iters, rollout_engine, ref_model, actor_sched
 
         if (step % args.save_interval == 0 or step == iters) and is_main_process():
             actor_model.eval()
-            moe_suffix = '_moe' if lm_config.use_moe else ''
-            ckp = f'{args.save_dir}/{args.save_weight}_{lm_config.hidden_size}{moe_suffix}.pth'
+            ckp = f'{args.save_dir}/{args.save_weight}_{lm_config.hidden_size}{_model_suffix(lm_config)}.pth'
             raw_actor = actor_model.module if isinstance(actor_model, DistributedDataParallel) else actor_model
             raw_actor = getattr(raw_actor, '_orig_mod', raw_actor)
             actor_state = raw_actor.state_dict()
@@ -382,8 +381,7 @@ if __name__ == "__main__":
     actor_model, tokenizer = init_model(lm_config, base_weight, device=args.device)
     ref_model, _ = init_model(lm_config, base_weight, device=args.device)
     ref_model = ref_model.eval().requires_grad_(False)
-    moe_suffix = '_moe' if lm_config.use_moe else ''
-    ckp = f'{args.save_dir}/{base_weight}_{lm_config.hidden_size}{moe_suffix}.pth'
+    ckp = f'{args.save_dir}/{base_weight}_{lm_config.hidden_size}{_model_suffix(lm_config)}.pth'
     state_dict = torch.load(ckp, map_location=args.device)
     critic_model = CriticModel(lm_config)
     critic_model.load_state_dict(state_dict, strict=False)
