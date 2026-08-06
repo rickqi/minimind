@@ -81,6 +81,8 @@
 | H3 混合 (参考) | `model_v5/H3/model_llm.bin` | 22.69MB | ✅ PASS (diff 0.00001) | ⚠️ 超 ESP32 flash, PC 部署 |
 | H3 混合+RAFT (参考) | `model_v5/H3-raft/model_llm.bin` | 22.69MB | ✅ PASS (diff 0.00001) | ⚠️ 超 ESP32 flash, PC 部署 |
 
+> RAG 配套: SD 卡全量索引 (113,609 docs, 医学过滤) 见下方"SD 卡全量索引"小节 — 拷入 `/sdcard/rag/` 即可供 `esp32_llm_v5_idf` 离线使用。
+
 ### H3 混合量化导出产物 (minimind/models/)
 
 | 文件 | 大小 | 说明 |
@@ -100,9 +102,24 @@
 ```
 esp32_llm_zh_v5/vocab.h        MiniMind BPE 词表 (VOCAB_N=6400)
 tools/send_prompt_rag.py       PC 端 RAG 串口发送器
-out/rag_index.pkl              jieba 医学检索索引 (11K docs)
+out/rag_index.pkl              jieba 医学检索索引 (11K docs, PC 评估用)
 models/full_sft_h2_raft_v4_h384_ple1.bin  H2 RAFT v4 PLE1 (14.73MB)
 ```
+
+### SD 卡全量索引 (esp32 离线 RAG 部署产物, 2026-08-06 医学过滤重建)
+
+> 供 `esp32_llm_v5_idf` 固件直接消费。固件从 `/sdcard/rag/` 读取三文件, 拷入 SD 卡同名目录即可。
+
+| 文件 | 大小 | 说明 |
+|---|---|---|
+| `esp32-ai/data_v4/sd_rag/index.bin` | 32.17MB | 单字倒排 term 表 + u32 doclist (4813 terms) |
+| `esp32-ai/data_v4/sd_rag/docs.bin` | 15.35MB | 证据文本 + label (113,609 docs) |
+| `esp32-ai/data_v4/sd_rag/meta.bin` | 23.8KB | 单字 → u8 IDF 表 |
+
+**部署到 esp32**: 三文件复制到 SD 卡 `/sdcard/rag/` 目录 (FAT32), 固件 `rag_sd.h` 启动时自动加载。
+**数据**: V3 KB (93,556 医学) + 临床指南全量 (医学过滤), 113,609 docs。
+**质量**: 肺癌/宫外孕/酮症酸中毒精准; 肝豆状核/白疕 有单字倒排结构性误配 (字符级局限)。
+**注意**: `esp32_llm_zh_v5` (MM_MINIMIND) 设备端 RAG 为死代码, 此索引仅供 `esp32_llm_v5_idf` (离线 RAG 固件) 使用。
 
 ---
 
