@@ -5,6 +5,10 @@
 ## [Unreleased]
 - **H2 RAFT v4** | `out/full_sft_h2_raft_v4_384_ple.pth` | 54.85MB | sft_medical_raft (8K, 负样本+医学过滤) | - | **2.70**
   - 说明: PLE1: `models/full_sft_h2_raft_v4_h384_ple1.bin` (14.73MB) | int4: `models/full_sft_h2_raft_v4_384_int4_g32.pth` (26.58MB) | 部署: `../esp32-ai/firmware/model_v5/H2/model_llm.bin` (14.73MB) | verify PASS diff 0.00001
+- **产物规范化 + 文档更新** (2026-08-06)
+  - `out/mix_report.json` → `out/medical_mix_report.json` (对齐 §输出路径规划 `{pipeline}_report.json` 规范), `scripts/mix_medical.py` 输出路径同步
+  - `docs/MODELS.md` 全面更新: H2 系列表补 **RAFT v4** 行; 部署表 H2 标注 v4; H3/H3-raft `model_llm.bin` 大小修正 21.64 → **22.69MB**; 能力矩阵/复现命令 v3 → v4
+  - 新增分层知识库: `scripts/AGENTS.md` (驱动层) + `trainer/AGENTS.md` (训练引擎契约)
 
 
 

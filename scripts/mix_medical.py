@@ -9,7 +9,7 @@
 输出:
   - dataset/pretrain_mixed.jsonl
   - dataset/sft_medical_mixed.jsonl
-  - out/mix_report.json
+  - out/medical_mix_report.json
 
 用法:
   python scripts/mix_medical.py
@@ -108,7 +108,7 @@ def main():
         'elapsed_s': round(time.time() - t0, 1),
     }
     os.makedirs(os.path.join(PROJECT_ROOT, 'out'), exist_ok=True)
-    with open(os.path.join(PROJECT_ROOT, 'out', 'mix_report.json'), 'w', encoding='utf-8') as f:
+    with open(os.path.join(PROJECT_ROOT, 'out', 'medical_mix_report.json'), 'w', encoding='utf-8') as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     print(f'[out] {out_p} ({os.path.getsize(out_p)/1e6:.1f}MB)')
