@@ -3,6 +3,13 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **RAG 索引文档更新** (2026-08-06)
+  - `esp32-ai/docs/RAG_INDEX_ANALYSIS_20260806.md` 全面更新为权威 RAG 说明文档 (commit `d5a05cd`)
+    - §1 总览: Index B 更新为重建后状态 (113,609 docs, 47.5MB)
+    - §3.2/§5/§7: SD 索引已提交 (0b4c432) + 离线 RAG 就绪 + 维护注意 (git checkout 还原)
+    - 新增 §8: 索引生成命令 + esp32 部署速查 + 文件清单
+  - `docs/MODELS.md` 新增"SD 卡全量索引"小节 (commit `9991996`): 三文件路径 + `/sdcard/rag/` 部署说明
+  - 索引实测结论: 修复后 jieba (Index A) 10 查询 90% > SD 单字 80% (scripts/AGENTS.md 陷阱 #10)
 - **SD 卡全量索引医学过滤重建** (2026-08-06, esp32-ai 侧)
   - `build_sd_index.py` 对齐医学过滤 (is_medical_label + RE_CLINICAL_HEAD + doc_label + body≥40)
   - 重建 `data_v4/sd_rag/` (113,609 docs, 47.5MB): index 32.17MB + docs 15.35MB + meta 23.8KB
