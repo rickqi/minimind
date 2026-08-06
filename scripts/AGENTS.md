@@ -67,4 +67,4 @@ exec python3 -u train_<X>.py --use_ple 1 --ple_dim {96|128} \
 6. **RAG 索引新鲜度**: `rag_index.pkl` 是 build 时快照, 依赖 `medical_jieba.txt` 当前版本。词典/过滤逻辑变更后**必须重建** (`python scripts/rag_medical.py build`), 否则 57% 医学术语检索失败 (实测: 肝豆状核变性/上消化道出血/不孕不育 曾全 miss)。
 7. **RAG 检索一致性 (部署=评估)**: PC 端 `rag_medical.py` 与 ESP32 部署侧 `esp32-ai/tools/send_prompt_rag.py` **必须同样加载医学词典 + med_only 过滤**, 否则设备端 Top-2 召回与评估结论不一致。
 8. **IDF cap=255 是 ESP32 uint8 硬约束**: `64·log(1+N/df)` 在 5891 docs 下 98.3% 词饱和, 但加法打分下对排序近乎无影响 (实测 18 查询 Top-2 仅 2 例 cosmetically 变化)。**不要为"提升区分度"移除 cap** — 真正区分度杠杆是 TF/BM25 或 jieba 分词修复 (如 酮症 OOV), 不是 cap。
-9. **KB 数据源缺口**: `format_data.jsonl` 有 3 个真缺失病种 (肝豆状核变性/戊肝/网球肘, KB 0 条, 但源 md 文件有数据) — 根因是 `build_guide_kb.py` 的 RE_CLINICAL_HEAD 正则误杀纯病名标题 (不含 病/炎/癌/瘤 后缀)。数据补充走 esp32-ai 侧, 需同时满足 11000 条 ESP32 2MB 配额。
+9. **KB 数据源缺口 (已修复 2026-08-06)**: 肝豆状核变性/戊型肝炎 已通过 esp32-ai `build_guide_kb.py` 修复 (正则加病种词 + 长度下限 80→40 + 医学 label 过滤) 恢复; KB 现 100% 医学 (11000 条, index.bin 2.05MB ≤ 2MB 分区)。**已知限制**: 别名检索 (如"网球肘"→正文用"肱骨外上髁炎"且在 answer 60字截断后) 仍不可命中 — DOC_CHARS=60 索引截断是设计权衡, 不改。

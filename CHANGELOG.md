@@ -3,6 +3,10 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **KB 病种覆盖修复** (2026-08-06, esp32-ai 侧)
+  - `build_guide_kb.py`: 正则加 `变性/肝豆状核/黄斑变性` + 长度下限 80→40 + `is_medical_label` 过滤 (KB 100% 医学)
+  - 效果: 肝豆状核变性 0→4 条, 戊型肝炎 0→1 条, 肱骨外上髁 0→2 条, 视网膜色素变性 6 条; PC 索引同步重建后检索命中
+  - 已知限制: "网球肘" 别名不可命中 (answer 60字截断设计权衡)
 - **RAG 索引修复** (2026-08-06)
   - `rag_medical.py`: `cmd_build` 加 `med_only=True` 医学过滤 (索引 11000→5891 docs, 排除 46.4% 健康管理/理赔/销售噪声)
   - `rag_medical.py`: `cmd_query`/`cmd_chat` 补 `load_medical_dict()` (查询分词与建库一致)
