@@ -88,6 +88,9 @@ bash scripts/wsl_train_h2_raft.sh        # H2 RAFT 微调 (输出 full_sft_h2_ra
 bash scripts/wsl_train_h3_mixed.sh       # H3 混合从零预训练
 bash scripts/wsl_sft_h3_mixed.sh         # H3 混合 SFT
 ```
+- 训练脚本统一 `cd trainer` + `python3 -u train_*.py`, 通过 `--from_weight` 续训
+- 输出到 `out/{save_weight}_{hidden_size}_ple.pth`, 权重带 `_ple` 后缀 (不与 dense/moe 冲突)
+- 用 `--use_ple 1 --ple_dim N` 启用 PLE 架构
 
 ### 评估
 ```bash
@@ -106,14 +109,19 @@ python chinese_v5/convert_h2.py --in ... --out firmware/model_v5/H2/model_llm.bi
 gcc -O3 -o /tmp/verify_h2 firmware/host_verify/verify_h2.c -I firmware/esp32_llm_zh_v5 -lm
 /tmp/verify_h2 firmware/model_v5/H2/model_llm.bin firmware/model_v5/H2/golden.txt  # 期望 PASS
 ```
+- **GQA→MHA**: H1/H2 是 kv_heads=4, ESP32 llm_v5.h 是标准 MHA, 导出时 `repeat_interleave(2)` 自动扩展
+- **golden 必须来自反量化模型** (int4 模拟), 否则 verify 测的是量化误差而非转换正确性
 
 ---
 
 ## 陷阱与注意事项
 
-1. **WSL 9p 文件系统**: 大文件/长脚本在 WSL 下可能触发 glibc 崩溃 (segfault), 用脚本文件方式运行, 避免 PowerShell 内联引号
-2. **Windows vs WSL 路径**: 脚本内路径需双兼容 (`D:\...` 与 `/mnt/d/...`)
-3. **CRLF 换行**: WSL 视角可能把 CRLF 视为 diff, 提交以 Windows 侧 git 为准
-4. **RAFT 负样本**: 训练后模型对无关证据应拒答; 若无证据场景应不注入 system 提示 (盲引修复)
-5. **量化**: SFT/RAFT 模型必须 int4 group=32 (group=128 会崩)
-6. **模型输出必登记**: 见上文"模型输出规范"——CHANGELOG + MODELS.md 缺一不可
+1. **WSL 9p 文件系统**: 大文件/长脚本在 WSL 下可能触发 glibc 崩溃 (segfault / double free)。
+   规避: 用脚本文件方式运行, 避免 PowerShell 内联引号; 清理 `__pycache__` 后再跑。
+2. **Windows vs WSL 路径**: 脚本内路径需双兼容 (`D:\...` 与 `/mnt/d/...`); KB 等外部数据用 WSL 路径 `/mnt/d/...`。
+3. **CRLF 换行**: WSL 视角可能把 CRLF 视为 diff (31 文件全变红是误报), 提交以 Windows 侧 git 为准。
+4. **RAFT 负样本**: 训练后模型对无关证据应拒答; 若无证据场景应不注入 system 提示 (盲引修复)。
+5. **量化**: SFT/RAFT 模型必须 int4 group=32 (group=128 会崩, group=16 过拟合)。
+6. **jieba 超长文本**: 去重/分词时对 >5000 字符文本截断, 否则 DAG 溢出崩溃。
+7. **模型输出必登记**: 见上文"模型输出规范"——CHANGELOG + MODELS.md 缺一不可。
+8. **脚本注释可能过期**: 训练脚本顶注释描述的是初始版本, 实际参数以脚本内容为准。
