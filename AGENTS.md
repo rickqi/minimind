@@ -71,6 +71,25 @@ python scripts/register_model.py --name "H2 RAFT v4" \
 - 训练权重只存 `out/` (gitignored), 部署产物登记到 `models/` (gitignored)
 - ESP32 产物通过 convert_h2.py 生成到 esp32-ai 仓库, 需在 esp32-ai 侧提交
 - **本项目只做模型生成 + 主机验证, 不烧录/实机验证** (COM 口操作不属于本项目职责)
+- **ESP32 flash 容量红线**: 16MB 总 flash, model 分区 14.5MB → H1 (6.31MB) / H2 (14.73MB) 可烧录 (H2 余量极小), **H3 (22.69MB) 超限, 仅 PC/树莓派部署**
+
+---
+
+## 🔍 RAG 体系 (医学精准问答核心, 跨两仓库)
+
+**精准问答 = RAG + RAFT 复述** (无 RAG 时 H1/H2 均退化/幻觉)。三条独立索引链, 各有用途:
+
+| 索引链 | 位置 | docs | 用途 |
+|---|---|---|---|
+| **PC jieba** | `out/rag_index.pkl` | 5,891 (医学过滤) | `rag_medical.py` 评估/PC 注入 |
+| **SD 三文件** | `esp32-ai/data_v4/sd_rag/{index,docs,meta}.bin` | 10,999 (v3 医学成品) | `esp32_llm_v5_idf` 离线 RAG (拷入 `/sdcard/rag/`) |
+| **flash RAG1** | `esp32-ai/data_v4/kb/index.bin` | 10,999 | 仅 v2/v4 旧固件; V5 设备端 RAG 为死代码 |
+
+**关键约束** (详见 `scripts/AGENTS.md` 陷阱 6-10 + `esp32-ai/docs/RAG_INDEX_ANALYSIS_20260806.md`):
+- **索引新鲜度**: `rag_index.pkl` 是 build 时快照, 词典/过滤变更后**必须重建** (`python scripts/rag_medical.py build`), 否则医学术语检索失败
+- **部署=评估一致性**: `send_prompt_rag.py` (部署) 与评估脚本必须**同样加载医学词典 + med_only 过滤**
+- **实测结论**: 修复后 jieba 10 查询 Top-1 90% > SD 单字 80%; SD 对肝豆状核/白疕有字符级结构性误配
+- **SD 索引 v3**: 用 `format_data.jsonl` (11K 医学成品) 构建, 精度>召回; 产物在 esp32-ai 仓库 git 追踪, 重跑会覆盖磁盘文件
 
 ---
 
@@ -84,6 +103,7 @@ python scripts/register_model.py --name "H2 RAFT v4" \
 | 训练日志 | `out/` | `{权重名}.log` (与权重同名) | `full_sft_h2_raft_v4.log` | CHANGELOG Steps/Loss 来源 |
 | 数据管线报告 | `out/` | `{pipeline}_report.json` | `medical_sft_raft_report.json` | 数据质量审计 |
 | 中间件 (RAG/缓存) | `out/` | `rag_index.pkl` / `b2_cache.json` / `medical_jieba.txt` | — | 可重建, 不登记 |
+| SD 卡 RAG 索引 | `esp32-ai/data_v4/sd_rag/` | `{index,docs,meta}.bin` (三文件) | 10,999 docs (11K 医学成品) | esp32-ai 侧提交 + MODELS.md SD 小节 |
 | 断点续训包 | `checkpoints/` | `{权重名}_{dim}_ple*_resume.pth` | — | 训练恢复用 |
 | int4 量化权重 | `models/` | `{权重名}_{dim}_int4_g32.pth` | `full_sft_h2_raft_v4_384_int4_g32.pth` | MODELS.md 量化小节 |
 | PLE1 扁平二进制 | `models/` | `{权重名}_h{dim}_ple1.bin` | `full_sft_h2_raft_v4_h384_ple1.bin` | MODELS.md 部署区 |
@@ -102,6 +122,7 @@ python scripts/register_model.py --name "H2 RAFT v4" \
 python scripts/build_medical_pretrain.py                    # 管线A: 预训练语料
 python scripts/build_medical_sft_b1.py                      # 管线B1: 直接转换
 python scripts/build_medical_sft_b2.py --api-key $KEY       # 管线B2: V4 Flash 合成
+python scripts/build_medical_sft_pure.py                    # 纯医学: B1过滤 + B2 合并
 python scripts/build_medical_raft.py --no-evidence-ratio 0.3 --negative-ratio 0.15 --med-only
 python scripts/mix_medical.py                               # 混合 (1:2 / 1:3)
 ```
