@@ -1,5 +1,5 @@
 #!/bin/bash
-# H2 RAFT 微调: 从 full_sft_h2 用 sft_medical_raft (8000条 证据+答案) 训练
+# H2 RAFT v4 微调 (从 full_sft_h2 用 sft_medical_raft 8000条, 负样本10%+医学过滤; 含4优化): 从 full_sft_h2 用 sft_medical_raft (8000条 证据+答案) 训练
 cd /mnt/d/codes/minimind/trainer
 export PYTHONIOENCODING=utf-8
 export CUDA_VISIBLE_DEVICES=0
