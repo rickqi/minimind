@@ -68,3 +68,4 @@ exec python3 -u train_<X>.py --use_ple 1 --ple_dim {96|128} \
 7. **RAG 检索一致性 (部署=评估)**: PC 端 `rag_medical.py` 与 ESP32 部署侧 `esp32-ai/tools/send_prompt_rag.py` **必须同样加载医学词典 + med_only 过滤**, 否则设备端 Top-2 召回与评估结论不一致。
 8. **IDF cap=255 是 ESP32 uint8 硬约束**: `64·log(1+N/df)` 在 5891 docs 下 98.3% 词饱和, 但加法打分下对排序近乎无影响 (实测 18 查询 Top-2 仅 2 例 cosmetically 变化)。**不要为"提升区分度"移除 cap** — 真正区分度杠杆是 TF/BM25 或 jieba 分词修复 (如 酮症 OOV), 不是 cap。
 9. **KB 数据源缺口 (已修复 2026-08-06)**: 肝豆状核变性/戊型肝炎 已通过 esp32-ai `build_guide_kb.py` 修复 (正则加病种词 + 长度下限 80→40 + 医学 label 过滤) 恢复; KB 现 100% 医学 (11000 条, index.bin 2.05MB ≤ 2MB 分区)。**已知限制**: 别名检索 (如"网球肘"→正文用"肱骨外上髁炎"且在 answer 60字截断后) 仍不可命中 — DOC_CHARS=60 索引截断是设计权衡, 不改。
+10. **索引实测结论 (2026-08-06)**: 修复后 Index A (jieba+医学词典) 10 查询 Top-1 相关率 **90% > esp32 SD 单字倒排 80%** — "SD 优于 flash jieba"的旧结论 (V5_RAG_verification) 已过时 (基于修复前无词典 jieba + 单查询窄验证)。SD 单字倒排对多字术语 (肝豆状核/白疕) 有结构性误配: 单字 IDF 饱和 (豆/核=255) 使含"核"的无关文档 (梅核气) 抢 Top-1。
