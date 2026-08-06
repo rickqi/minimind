@@ -1,7 +1,7 @@
 # 模型清单 (Models Inventory)
 
 > 本文件记录 MiniMind 项目全部训练模型版本、训练数据、Loss 与部署状态。
-> 更新日期: 2026-08-05 | 与 `docs/MEDICAL_TRAINING.md` 配套
+> 更新日期: 2026-08-06 | 与 `docs/MEDICAL_TRAINING.md` 配套
 >
 > 演进摘要:
 > 1. 基础链路 (08-03~04): H1/H2/H3 预训练 → SFT → DPO, 纯通用数据
@@ -49,6 +49,7 @@
 | 医疗增强 | `out/full_sft_h2_med_384_ple.pth` | 54.8MB | sft_medical_mixed (57K) | 7,102 | 1.82 → **1.74** |
 | 纯医学 | `out/full_sft_h2_pure_384_ple.pth` | 54.8MB | sft_medical_pure (13K) | 1,634×3 | 3.52 → **3.01** (过拟合↑) |
 | **RAFT v3** | `out/full_sft_h2_raft_v3_384_ple.pth` | 54.8MB | sft_medical_raft (8K, E2干扰) | 1,000×3 | 2.57 → **2.25** |
+| **RAFT v4** | `out/full_sft_h2_raft_v4_384_ple.pth` | 54.8MB | sft_medical_raft (8K, 负样本+医学过滤) | 1,000×3 | 3.20 → **2.70** |
 
 ---
 
@@ -74,10 +75,10 @@
 |---|---|---|---|---|
 | **H1 RAFT** | `model_v5/H1/model_llm.bin` | **6.31MB** | ✅ PASS (diff 0.00000) | ESP32 轻量医学问答 |
 | H1 参考 | `model_v5/H1/model.bin` | 6.09MB | — | PLE1 原始格式 |
-| **H2 RAFT** | `model_v5/H2/model_llm.bin` | **14.73MB** | ✅ PASS (diff 0.00001) | ESP32 精准医学问答 |
+| **H2 RAFT v4** | `model_v5/H2/model_llm.bin` | **14.73MB** | ✅ PASS (diff 0.00001) | ESP32 精准医学问答 |
 | H2 参考 | `model_v5/H2/model.bin` | 14.07MB | — | PLE1 原始格式 |
-| H3 混合 (参考) | `model_v5/H3/model_llm.bin` | 21.64MB | ✅ PASS (diff 0.00001) | ⚠️ 超 ESP32 flash, PC 部署 |
-| H3 混合+RAFT (参考) | `model_v5/H3-raft/model_llm.bin` | 21.64MB | ✅ PASS (diff 0.00001) | ⚠️ 超 ESP32 flash, PC 部署 |
+| H3 混合 (参考) | `model_v5/H3/model_llm.bin` | 22.69MB | ✅ PASS (diff 0.00001) | ⚠️ 超 ESP32 flash, PC 部署 |
+| H3 混合+RAFT (参考) | `model_v5/H3-raft/model_llm.bin` | 22.69MB | ✅ PASS (diff 0.00001) | ⚠️ 超 ESP32 flash, PC 部署 |
 
 ### H3 混合量化导出产物 (minimind/models/)
 
@@ -90,15 +91,16 @@
 | `full_sft_h3_mixed_h512_golden.npz/.txt` | — | golden 参考 (混合 SFT) |
 | `full_sft_h3_mixed_raft_h512_golden.npz/.txt` | — | golden 参考 (RAFT) |
 
-> ⚠️ **部署限制**: H3 (38.16M) model_llm.bin 21.64MB 超出 ESP32-S3 model 分区 (14.5MB, 16MB flash 上限)。
+> ⚠️ **部署限制**: H3 (38.16M) model_llm.bin 22.69MB 超出 ESP32-S3 model 分区 (14.5MB, 16MB flash 上限)。
 > H3 混合量化模型适用于 **PC/树莓派/大 flash 板卡**; ESP32 仅支持 H1 (6.31MB) / H2 (14.73MB)。
-> 注: 早期导出的 H3 (21.64MB) 为**混合 SFT 版 (无 RAFT)**; 本文件已补充 **H3 混合+RAFT 版**。
+> 注: 早期导出的 H3 (21.64MB) 为**混合 SFT 版 (无 RAFT)**; 本文件已补充 **H3 混合+RAFT 版** (22.69MB)。
 
 配套部署资产:
 ```
 esp32_llm_zh_v5/vocab.h        MiniMind BPE 词表 (VOCAB_N=6400)
 tools/send_prompt_rag.py       PC 端 RAG 串口发送器
 out/rag_index.pkl              jieba 医学检索索引 (11K docs)
+models/full_sft_h2_raft_v4_h384_ple1.bin  H2 RAFT v4 PLE1 (14.73MB)
 ```
 
 ---
@@ -114,7 +116,7 @@ out/rag_index.pkl              jieba 医学检索索引 (11K docs)
 | `sft_medical_b1.jsonl` | 10,681 | 1.8M | 医学 SFT (直接转换) |
 | `sft_medical_b2.jsonl` | 3,521 | 0.3M | 医学 SFT (V4 Flash 合成) |
 | `sft_medical_pure.jsonl` | 13,069 | 1.9M | 纯医学 SFT |
-| `sft_medical_raft.jsonl` | 8,000 | 2.2M | RAFT 复述 (E2 干扰) |
+| `sft_medical_raft.jsonl` | 8,000 | 2.2M | RAFT 复述 (v4: 负样本+医学过滤) |
 | `sft_medical_mixed.jsonl` | 56,808 | 16.6M | 医疗增强 SFT (1:3) |
 
 ---
@@ -125,7 +127,7 @@ out/rag_index.pkl              jieba 医学检索索引 (11K docs)
 
 | 模型 | 通用对话 | 泛医学知识 | 精准医学问答 | 部署 |
 |---|---|---|---|---|
-| **H2 RAFT v3** | ✅ | ⚠️ | ✅ **RAG 证据复述** | ESP32 model_llm.bin |
+| **H2 RAFT v4** | ✅ | ⚠️ | ✅ **RAG 证据复述** (盲引修复) | ESP32 model_llm.bin |
 | **H1 RAFT** | ✅ | ⚠️ | ✅ RAG (轻量) | ESP32 model_llm.bin |
 | **H3 混合** | ✅ | ✅ 内在知识 | ❌ 无检索不精准 | PC |
 | H3 混合+RAFT | ✅ | ✅ | ⚠️ 组合无加成 | PC (超 ESP32 flash) |
@@ -192,14 +194,14 @@ bash scripts/wsl_sft_h3_mixed.sh
 
 # RAFT 微调
 bash scripts/wsl_train_h1_raft.sh
-bash scripts/wsl_train_h2_raft.sh   # 输出 full_sft_h2_raft_v3
+bash scripts/wsl_train_h2_raft.sh   # 输出 full_sft_h2_raft_v4 (负样本+医学过滤)
 
 # 评估
 bash scripts/wsl_eval_rag_compare.sh    # H1/H2 RAG vs 无RAG
-bash scripts/wsl_eval_raft_v3.sh        # RAFT v3 问答
+bash scripts/wsl_eval_raft_v4.sh        # RAFT v4 问答 (负样本/盲引验证)
 
 # ESP32 部署
-python scripts/export_ple1.py --weight full_sft_h2_raft_v3  # PLE1 导出
+python scripts/export_ple1.py --weight full_sft_h2_raft_v4  # PLE1 导出
 python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 ```
 

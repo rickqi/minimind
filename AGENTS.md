@@ -2,6 +2,9 @@
 
 > 本文件为 OpenCode/Claude 等 AI 代理提供本仓库的关键上下文, 避免踩坑。
 > 语言: 中文 (与仓库内 README.md / docs/*.md 一致)
+>
+> **分层知识库**: `scripts/AGENTS.md` (驱动层约定) · `trainer/AGENTS.md` (训练引擎契约)
+> 修改这两目录代码前必读对应子文件。
 
 ---
 
@@ -68,6 +71,27 @@ python scripts/register_model.py --name "H2 RAFT v4" \
 - 训练权重只存 `out/` (gitignored), 部署产物登记到 `models/` (gitignored)
 - ESP32 产物通过 convert_h2.py 生成到 esp32-ai 仓库, 需在 esp32-ai 侧提交
 - **本项目只做模型生成 + 主机验证, 不烧录/实机验证** (COM 口操作不属于本项目职责)
+
+---
+
+## 📦 输出路径规划 (交付物规范, 所有产物必须落位)
+
+**命名统一**: `{阶段}_{架构}[_{变体}]_{dim}_ple.pth` (阶段: pretrain/full_sft/dpo/grpo/ppo/agent; 架构: h1/h2/h3; 变体: med/pure/raft/raft_v4/mixed/mixed_raft)
+
+| 产物类型 | 存放目录 | 命名规则 | 示例 | 追踪方式 |
+|---|---|---|---|---|
+| 训练权重 (fp16) | `out/` | `{阶段}_{架构}[_{变体}]_{dim}_ple.pth` | `full_sft_h2_raft_v4_384_ple.pth` | MODELS.md 系列表 |
+| 训练日志 | `out/` | `{权重名}.log` (与权重同名) | `full_sft_h2_raft_v4.log` | CHANGELOG Steps/Loss 来源 |
+| 数据管线报告 | `out/` | `{pipeline}_report.json` | `medical_sft_raft_report.json` | 数据质量审计 |
+| 中间件 (RAG/缓存) | `out/` | `rag_index.pkl` / `b2_cache.json` / `medical_jieba.txt` | — | 可重建, 不登记 |
+| 断点续训包 | `checkpoints/` | `{权重名}_{dim}_ple*_resume.pth` | — | 训练恢复用 |
+| int4 量化权重 | `models/` | `{权重名}_{dim}_int4_g32.pth` | `full_sft_h2_raft_v4_384_int4_g32.pth` | MODELS.md 量化小节 |
+| PLE1 扁平二进制 | `models/` | `{权重名}_h{dim}_ple1.bin` | `full_sft_h2_raft_v4_h384_ple1.bin` | MODELS.md 部署区 |
+| golden 验证对 | `models/` | `{权重名}_h{dim}_golden.{npz,txt}` | — | 随 ple1 同批次生成 |
+| ESP32 部署产物 | `../esp32-ai/firmware/model_v5/{H1,H2,H3}/` | `model_llm.bin` + `golden.txt` | — | esp32-ai 侧提交 |
+| 训练数据 | `dataset/` | `{来源}_{类型}.jsonl` | `sft_medical_raft.jsonl` | MODELS.md 数据资产节 |
+
+**产出即登记**: 任何新权重/量化/部署产物生成后, 用 `register_model.py` 登记或手动按 §模型输出规范更新 CHANGELOG.md + MODELS.md, 缺一不可。
 
 ---
 
