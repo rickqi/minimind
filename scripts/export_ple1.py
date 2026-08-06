@@ -33,29 +33,34 @@ MAGIC = 0x504C4531  # "PLE1"
 GROUP = 32  # SFT 模型 4-bit 敏感, group=32 (esp32-ai 实测 group=128 崩)
 
 
-def quant_pack(w, group=GROUP):
-    """Group-wise symmetric int4, ragged (no padding) with fp16 scales.
-    与 esp32-ai src/export.py:34 完全一致: 末组可短于 group, scales 先 fp16 舍入.
+def quant_pack(w, group=GROUP, bits=4):
+    """Group-wise symmetric int4/int8, ragged (no padding) with fp16 scales.
+    与 esp32-ai src/export.py:34 完全一致: 末组可短于 group, scales 做 fp16 舍入.
+    bits=4: codes 2-per-byte; bits=8: codes 1-per-byte (int8, -127..127).
     """
     w = w.float()
     out_shape = w.shape
     x = w.reshape(-1, out_shape[-1])
     rows, cols = x.shape
     n_groups = (cols + group - 1) // group
+    max_code = 7 if bits == 4 else 127
     q = torch.zeros(rows, cols)
     dq = torch.zeros(rows, cols)
     scales = torch.zeros(rows, n_groups)
     for gi in range(n_groups):
         a, b = gi * group, min((gi + 1) * group, cols)
         seg = x[:, a:b]
-        sc = (seg.abs().amax(dim=1, keepdim=True) / 7).clamp_min(1e-8)
+        sc = (seg.abs().amax(dim=1, keepdim=True) / max_code).clamp_min(1e-8)
         sc = sc.half().float()  # fp16-round the scale
         scales[:, gi] = sc.squeeze(1)
-        qi = torch.clamp(torch.round(seg / sc), -7, 7)
+        qi = torch.clamp(torch.round(seg / sc), -max_code, max_code)
         q[:, a:b] = qi
         dq[:, a:b] = qi * sc
     dq = dq.reshape(out_shape)
-
+    scales16 = scales.numpy().astype(np.float16)
+    if bits == 8:
+        codes = q.to(torch.int8).numpy()          # -127..127, 1 byte per code
+        return codes.reshape(-1), scales16.reshape(-1), dq
     codes = (q.to(torch.int16) + 8).to(torch.uint8).numpy()  # rows x cols, 0..15
     row_bytes = (cols + 1) // 2
     packed = np.zeros((rows, row_bytes), dtype=np.uint8)
@@ -63,7 +68,6 @@ def quant_pack(w, group=GROUP):
     hi = codes[:, 1::2]
     packed[:, : lo.shape[1]] = lo
     packed[:, : hi.shape[1]] |= (hi << 4)
-    scales16 = scales.numpy().astype(np.float16)
     return packed.reshape(-1), scales16.reshape(-1), dq
 
 
@@ -79,6 +83,7 @@ def main():
     ap.add_argument('--save_dir', type=str, default='out', help='训练权重目录')
     ap.add_argument('--out_dir', type=str, default='models')
     ap.add_argument('--group', type=int, default=GROUP)
+    ap.add_argument('--bits', type=int, default=4, choices=[4, 8], help='quantization bits (4=default, 8=low-loss)')
     args = ap.parse_args()
 
     cfg = MiniMindConfig(
@@ -162,7 +167,7 @@ def main():
             print(f'  cleanup NaN/Inf in {name}: {torch.isnan(t).sum().item()} NaN')
             t = torch.nan_to_num(t, nan=0.0, posinf=0.0, neginf=0.0)
         if quant:
-            packed, scales, dq = quant_pack(t, args.group)
+            packed, scales, dq = quant_pack(t, args.group, args.bits)
             dq_sd[name] = dq
             blobs.append(('Q', name, t.shape, packed, scales))
         else:
