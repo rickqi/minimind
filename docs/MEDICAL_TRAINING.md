@@ -60,7 +60,7 @@ sft_medical_mixed.jsonl = 医疗 1 : 通用 3  = 56,808 条
 | 预训练语料 | `out/medical_pretrain_report.json` |
 | B1 SFT | `out/medical_sft_b1_report.json` |
 | B2 SFT | `out/medical_sft_b2_report.json` |
-| 混合 | `out/mix_report.json` |
+| 混合 | `out/medical_mix_report.json` |
 
 ---
 

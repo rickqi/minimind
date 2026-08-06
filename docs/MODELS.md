@@ -65,7 +65,7 @@
 | **混合+RAFT** | `out/full_sft_h3_mixed_raft_512_ple.pth` | 82.9MB | sft_medical_raft (8K) | 1,000×3 | 1.06 → **1.05** |
 
 > H3 系列部署产物: `models/full_sft_h3_mixed_raft_h512_ple1.bin` (22.69MB PLE1) →
-> `model_v5/H3-raft/model_llm.bin` (21.64MB, verify PASS)。H3 超 ESP32 flash, 适用于 PC/树莓派。
+> `model_v5/H3-raft/model_llm.bin` (22.69MB, verify PASS)。H3 超 ESP32 flash, 适用于 PC/树莓派。
 
 ---
 
@@ -138,9 +138,9 @@ models/full_sft_h2_raft_v4_h384_ple1.bin  H2 RAFT v4 PLE1 (14.73MB)
 | 模型 | model_llm.bin | ESP32 flash 分区 (14.5MB) | 状态 |
 |---|---|---|---|
 | **H1 RAFT** | 6.31MB | ✅ 可烧录 | 就绪 |
-| **H2 RAFT** | 14.73MB | ✅ 可烧录 (余量小) | 就绪 |
-| H3 混合 | 21.64MB | ❌ 超限 | PC 部署 |
-| H3 混合+RAFT | 21.64MB | ❌ 超限 | PC 部署 |
+| **H2 RAFT v4** | 14.73MB | ✅ 可烧录 (余量小) | 就绪 |
+| H3 混合 | 22.69MB | ❌ 超限 | PC 部署 |
+| H3 混合+RAFT | 22.69MB | ❌ 超限 | PC 部署 |
 
 ### 已验证结论
 
