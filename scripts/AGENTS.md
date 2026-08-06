@@ -1,6 +1,6 @@
 # scripts/AGENTS.md
 
-> 本目录是 MiniMind 的"驱动层": 52 个脚本, 覆盖 WSL 训练启动、医疗数据管线、PLE 量化导出、ESP32 部署产物生成与推理服务。
+> 本目录是 MiniMind 的"驱动层": 54 个脚本, 覆盖 WSL 训练启动、医疗数据管线、PLE 量化导出、ESP32 部署产物生成与推理服务。
 > 父级约束见根 `AGENTS.md` (模型输出规范 / 多环境隔离)。本文件只记录**模板与陷阱**, 不重复命令速查。
 
 ---
@@ -10,11 +10,11 @@
 | 分类 | 文件模式 | 作用 | 运行环境 |
 |---|---|---|---|
 | A. WSL 训练启动 | `wsl_train_*.sh` / `wsl_sft_*.sh` / `wsl_dpo_*.sh` | 调 trainer/train_*.py | WSL GPU |
-| B. WSL 评估 | `wsl_eval_*.sh` (13个) | 内联 heredoc 问答评估 | WSL GPU |
+| B. WSL 评估 | `wsl_eval_*.sh` (16个) | 内联 heredoc 问答评估 | WSL GPU |
 | C. WSL 工具 | `wsl_export_dpo.sh` `wsl_verify_dpo.sh` `wsl_status.sh` `wsl_gpu_test.sh` | 批量导出 / 权重校验 / 看门狗 | WSL GPU |
 | D. 医疗数据管线 | `build_medical_*.py` + `mix_medical.py` | 生成 dataset/*.jsonl | Windows/WSL |
 | E. 导出/量化/部署 | `export_ple1.py` `quantize_ple.py` `gen_vocab_minimind.py` `rag_medical.py` `register_model.py` | PLE1/int4/vocab.h/RAG/登记 | Windows |
-| F. 推理/服务/演示 | `serve_openai_api.py` `chat_api.py` `web_demo.py` `eval_toolcall.py` `convert_model.py` | API/WebUI/转换 | Windows |
+| F. 推理/服务/演示/评估 | `serve_openai_api.py` `chat_api.py` `web_demo.py` `eval_toolcall.py` `eval_h1_raft_v4.py` `convert_model.py` | API/WebUI/转换/参数化评估 | Windows/WSL GPU |
 
 ## 2. WSL 训练启动模板 (A 类, 所有 wsl_train/sft/dpo 统一骨架)
 
@@ -61,7 +61,7 @@ exec python3 -u train_<X>.py --use_ple 1 --ple_dim {96|128} \
 
 1. WSL 路径硬编码 `/mnt/d/codes/minimind/...`; Python 工具双兼容 (`D:/` 与 `/mnt/d/` 回退)。
 2. **训练脚本破坏性**: 启动即 `pkill` + `rm -f` 旧权重/日志/断点, 无备份。
-3. 评估脚本 (B 类) 是非参数化 heredoc, 权重名/问题集写死, 不可复用; 可复用入口只有 `rag_medical.py`。
+3. 评估脚本 (B 类) 是非参数化 heredoc, 权重名/问题集写死, 不可复用; 可复用入口: `rag_medical.py` (RAG) + `eval_h1_raft_v4.py` (参数化 Python 评估, H1 架构固定)。
 4. 输出目录 `out/ models/ checkpoints/` 全部 gitignored, 产物靠 register_model.py 登记追踪。
 5. `_ple` 后缀: 所有 PLE 权重为 `{name}_{dim}_ple.pth`, 导出物对应 `_h{dim}_ple1.bin` / `_int4_g32.pth`。
 6. **RAG 索引新鲜度**: `rag_index.pkl` 是 build 时快照, 依赖 `medical_jieba.txt` 当前版本。词典/过滤逻辑变更后**必须重建** (`python scripts/rag_medical.py build`), 否则 57% 医学术语检索失败 (实测: 肝豆状核变性/上消化道出血/不孕不育 曾全 miss)。

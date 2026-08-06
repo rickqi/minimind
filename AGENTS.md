@@ -55,7 +55,7 @@ python scripts/register_model.py --name "H2 RAFT v4" \
     --ple1 models/full_sft_h2_raft_v4_h384_ple1.bin \
     --int4 models/full_sft_h2_raft_v4_384_int4_g32.pth \
     --deploy ../esp32-ai/firmware/model_v5/H2/model_llm.bin \
-    --data "sft_medical_raft (8K, 负样本)" --loss "2.70"
+    --data "sft_medical_raft (8K, 负样本)" --loss "2.70" --verify "PASS diff 0.00001"
 ```
 
 ---
@@ -130,8 +130,11 @@ python scripts/mix_medical.py                               # 混合 (1:2 / 1:3)
 ### 训练 (WSL GPU)
 ```bash
 bash scripts/wsl_train_h2_raft.sh        # H2 RAFT 微调 (输出 full_sft_h2_raft_v4)
+bash scripts/wsl_train_h1_raft.sh        # H1 RAFT v4 微调 (输出 full_sft_h1_raft_v4)
 bash scripts/wsl_train_h3_mixed.sh       # H3 混合从零预训练
 bash scripts/wsl_sft_h3_mixed.sh         # H3 混合 SFT
+bash scripts/wsl_train_h3_mixed_raft.sh  # H3 混合+RAFT (组合验证)
+# 完整清单: wsl_train_h{1,2,3}.sh / wsl_sft_h{1,2,3}.sh / wsl_dpo_h{1,2,3}.sh
 ```
 - 训练脚本统一 `cd trainer` + `python3 -u train_*.py`, 通过 `--from_weight` 续训
 - 输出到 `out/{save_weight}_{hidden_size}_ple.pth`, 权重带 `_ple` 后缀 (不与 dense/moe 冲突)
@@ -140,8 +143,10 @@ bash scripts/wsl_sft_h3_mixed.sh         # H3 混合 SFT
 ### 评估
 ```bash
 bash scripts/wsl_eval_raft_v4.sh         # RAFT v4 问答 (负样本/盲引验证)
+bash scripts/wsl_eval_h1_raft_v4.sh      # H1 RAFT v4 问答 (调用 scripts/eval_h1_raft_v4.py)
 bash scripts/wsl_eval_rag_compare.sh     # H1/H2 RAG vs 无RAG
 bash scripts/wsl_eval_4models.sh         # 4 模型横向对比
+# 完整清单: 16 个 wsl_eval_*.sh, 详见 scripts/AGENTS.md
 ```
 
 ### ESP32 部署产物生成 (只生成+验证, 不烧录)
