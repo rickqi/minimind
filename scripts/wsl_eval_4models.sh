@@ -61,7 +61,7 @@ tok = AutoTokenizer.from_pretrained('model')
 
 models = {
     'H1 RAFT (10.8M)': load(256, 6, 96, 'full_sft_h1_raft'),
-    'H2 RAFT (25.0M)': load(384, 8, 128, 'full_sft_h2_raft_v3'),
+    'H2 RAFT v4 (25.0M)': load(384, 8, 128, 'full_sft_h2_raft_v4'),
     'H3混合 (38.2M)': load(512, 8, 128, 'full_sft_h3_mixed'),
     'H3混合+RAFT (38.2M)': load(512, 8, 128, 'full_sft_h3_mixed_raft'),
 }
