@@ -40,6 +40,7 @@
 ### 🌿 分支与冲突策略(重要)
 
 - **master 分支** = 当前各类尝试的集合 (PLE/RAFT/RAG/医疗)
+- **fork 关系 (2026-08-07 核实)**: 本项目是官方上游 `jingyaogong/minimind` 的 **fork** — 始于同一根提交 (`a18d84e`, 2024-07-27), 继承了上游全部历史 (12 位上游作者: gongjy/FloatFrank/whitesword/readlnh 等), 仅本地作者 rick qi 为新增。`upstream` remote 已配置 (`https://github.com/jingyaogong/minimind.git`), 上游历史已通过 `fe19dfa` 合入 master。
 - **冲突评估 (2026-08-07 实测)**: 本地深改的上游文件 (`model/model_minimind.py`, `trainer/trainer_utils.py`, `train_pretrain/full_sft/dpo.py`) **拉取上游必然 merge conflict**; 本地新增文件 (scripts/ docs/ dataset/ AGENTS.md) 零冲突
 - **开发规范**: 新尝试尽量新增文件或隔离参数 (use_ple 默认 False), 减少对上游原版的侵入
 

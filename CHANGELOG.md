@@ -3,6 +3,9 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **AGENTS.md 补充 fork 关系说明** (2026-08-07)
+  - 明确: 本项目是官方上游 jingyaogong/minimind 的 fork (同根 a18d84e, 继承 12 位上游作者历史, 仅 rick qi 为本地作者)
+  - upstream remote 已配置, 上游历史已通过 fe19dfa 合入 master
 - **上游同步流程固化为默认版本管理要求** (2026-08-07)
   - 首次执行策略 A: 添加上游 remote + upstream-merge 分支合并, 验证于 `fe19dfa` 零冲突
   - AGENTS.md 新增"📥 上游同步流程": 禁止直接 git pull, 必用 upstream-merge 分支 + PLE 权重加载验证 (missing=0 unexpected=0)
