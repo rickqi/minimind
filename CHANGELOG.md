@@ -3,6 +3,9 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **上游同步流程固化为默认版本管理要求** (2026-08-07)
+  - 首次执行策略 A: 添加上游 remote + upstream-merge 分支合并, 验证于 `fe19dfa` 零冲突
+  - AGENTS.md 新增"📥 上游同步流程": 禁止直接 git pull, 必用 upstream-merge 分支 + PLE 权重加载验证 (missing=0 unexpected=0)
 - **AGENTS.md 补充两类训练模式 + 分支冲突策略** (2026-08-07)
   - 明确: ①默认自带训练模式 (上游 minimind, 基础, 代码必须保留) ②自有数据分支尝试 (PLE/RAFT/RAG/医疗, 隔离参数 use_ple 默认 False)
   - 冲突评估: 本地深改的上游文件 (model_minimind/trainer_utils/train_*) 拉取上游必然冲突; 新增文件 (scripts/docs/dataset) 零冲突
