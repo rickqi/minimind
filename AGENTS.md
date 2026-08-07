@@ -10,8 +10,13 @@
 
 ## 仓库定位
 
-**MiniMind** — 从 0 训练极小型 LLM 的完整链路项目 (PLE 架构, Per-Layer Embedding)。
-包含: 模型训练 (PyTorch 原生, WSL-GPU)、医疗数据管线、量化导出、ESP32 部署产物生成与主机验证。
+**MiniMind** — 本项目的目的: **处理训练数据 → 训练模型 → 发布导出指定模型相关数据和文件**。
+完整链路 (PLE 架构, Per-Layer Embedding): 模型训练 (PyTorch 原生, WSL-GPU)、医疗数据管线、量化导出、ESP32 部署产物生成与主机验证。
+
+**项目边界 (明确)**:
+- ✅ **负责**: 训练数据处理/清洗/构建 → 模型训练 (pretrain/SFT/DPO/RAFT) → 量化导出 (int4/int8) → 部署产物生成 (PLE1 + golden) → 主机验证 (verify PASS) → 产物登记发布 (MODELS.md + CHANGELOG)
+- ❌ **不负责**: ESP32 实机烧录/实机验证 (COM 口操作不属于本项目职责), 旧固件 (V1-V3) 维护 (已冻结, 只维护 V5)
+- 📦 **交付物**: 训练权重 (out/)、部署二进制 (models/ + esp32-ai/)、数据管线报告、模型清单文档
 
 - 训练环境: **WSL Ubuntu-22.04 + RTX 5080** (torch 2.9.1+cu128), 训练脚本在 `scripts/wsl_*.sh`
 - 模型架构: H1 (d256/l6/p96) / H2 (d384/l8/p128) / H3 (d512/l8/p128), 词表 6400 (BPE)
