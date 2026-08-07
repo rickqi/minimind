@@ -3,6 +3,9 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **项目定位更新 + V1-V3 冻结决策** (2026-08-07)
+  - 根 AGENTS.md 仓库定位明确项目边界: ✅ 负责 (训练数据→训练→量化→部署产物→验证→登记发布) / ❌ 不负责 (实机烧录, 旧固件 V1-V3 维护)
+  - esp32-ai AGENTS.md 记录 V1-V3 固件冻结 (commit `769ed59`): 不修复 head n_groups bug, 只维护 V5
 - **ESP32 head_matvec_int8 logits 破坏修复** (2026-08-06, esp32-ai commit `48906c1`)
   - **根因**: 设备端输出头 (tok_emb/lm_head, [6400,384]) 被强制用 int8 激活 + 单 scale (`n_groups==1` 过期假设) 计算, 但 H2 n_groups=12 (384/32)
     - int8 激活量化: 实测 max_diff 4.23 (logits 排序崩溃 → 设备乱码)
