@@ -23,6 +23,27 @@
 - 医疗数据: 5 条管线 (A/B1/B2/RAFT/混合), 详见 `docs/MEDICAL_TRAINING.md`
 - 模型清单: 全部训练/部署产物登记在 `docs/MODELS.md`
 
+### 🏗️ 两类训练模式(重要)
+
+本项目训练代码分两类, 处理时必须区分:
+
+| 类型 | 说明 | 数据 | 代码基线 |
+|---|---|---|---|
+| **1. 默认自带模式** | 项目 fork 自上游 minimind 的原生训练链路 (pretrain/SFT/DPO/GRPO/PPO/Agent/LoRA/蒸馏), **是基础** | 官方数据 (pretrain_t2t_mini / sft_t2t_mini / dpo) | `trainer/*.py` + `model/*.py` 上游原版 |
+| **2. 自有数据分支尝试** | 基于自有医疗数据在默认模式上的扩展 (PLE 架构 / RAFT / RAG / 医疗管线) | 医疗数据 (5 管线) | PLE 修改版 + `scripts/*` + `docs/*` |
+
+**规则 (硬性)**:
+- **默认模式代码必须保留** — 上游原版 trainer/model 不被破坏
+- **所有新尝试代码避免修改默认训练代码** — 新增用新文件 (scripts/ 等) 或清晰标注的 PLE 分支 (use_ple 参数隔离, 默认 False 保持上游行为)
+- **本项目默认还会进一步更新** (上游 minimind 持续迭代) — 需保持可拉取上游
+
+### 🌿 分支与冲突策略(重要)
+
+- **master 分支** = 当前各类尝试的集合 (PLE/RAFT/RAG/医疗)
+- **冲突评估 (2026-08-07)**: 本地深改的上游文件 (`model/model_minimind.py`, `trainer/trainer_utils.py`, `train_pretrain/full_sft/dpo.py`) **拉取上游必然 merge conflict**; 本地新增文件 (scripts/ docs/ dataset/ AGENTS.md) 零冲突
+- **拉取上游策略**: 不直接 `git pull` 到 master; 需单独建 `upstream-merge` 分支手动解决冲突, 验证后合回
+- **开发规范**: 新尝试尽量新增文件或隔离参数 (use_ple 默认 False), 减少对上游原版的侵入
+
 ---
 
 ## 🔥 模型输出规范 (硬性要求, 每次模型文件输出必须执行)
