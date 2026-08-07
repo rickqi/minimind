@@ -40,9 +40,44 @@
 ### 🌿 分支与冲突策略(重要)
 
 - **master 分支** = 当前各类尝试的集合 (PLE/RAFT/RAG/医疗)
-- **冲突评估 (2026-08-07)**: 本地深改的上游文件 (`model/model_minimind.py`, `trainer/trainer_utils.py`, `train_pretrain/full_sft/dpo.py`) **拉取上游必然 merge conflict**; 本地新增文件 (scripts/ docs/ dataset/ AGENTS.md) 零冲突
-- **拉取上游策略**: 不直接 `git pull` 到 master; 需单独建 `upstream-merge` 分支手动解决冲突, 验证后合回
+- **冲突评估 (2026-08-07 实测)**: 本地深改的上游文件 (`model/model_minimind.py`, `trainer/trainer_utils.py`, `train_pretrain/full_sft/dpo.py`) **拉取上游必然 merge conflict**; 本地新增文件 (scripts/ docs/ dataset/ AGENTS.md) 零冲突
 - **开发规范**: 新尝试尽量新增文件或隔离参数 (use_ple 默认 False), 减少对上游原版的侵入
+
+### 📥 上游同步流程(默认版本管理要求, 2026-08-07 已验证)
+
+**必须遵守** — 拉取上游 minimind 更新时的唯一合法流程 (已验证于 `fe19dfa`, 零冲突):
+
+```bash
+# 1. 检查上游是否有新提交 (upstream remote 已配置)
+git fetch upstream
+git log --oneline master..upstream/master    # 看上游领先多少
+
+# 2. 创建合并分支 (禁止直接 git pull 到 master)
+git checkout -b upstream-merge
+
+# 3. 合并上游 (冲突在此分支解决, master 不受影响)
+git merge upstream/master --no-edit
+
+# 4. 解决冲突 (若出现):
+#    - 本地 PLE 相关文件冲突 → 保留本地 use_ple 隔离逻辑 + 合并上游新逻辑
+#    - 纯文档/新增文件 → 通常 auto-merge 干净
+# 5. 验证 (必须):
+#    - python -c "import py_compile; [py_compile.compile(f, doraise=True) for f in ['model/model_minimind.py','trainer/trainer_utils.py']]"
+#    - 加载 PLE 权重: MiniMindForCausalLM(cfg) + load_state_dict → missing=0 unexpected=0
+#    - 确认 use_ple=True 行为未变
+
+# 6. 合回 master + 推送
+git checkout master
+git merge upstream-merge --no-edit
+git push origin master
+git branch -d upstream-merge
+```
+
+**规则**:
+- **禁止直接 `git pull upstream` 到 master** — 必用 upstream-merge 分支
+- 合并前必跑 PLE 权重加载验证 (missing=0 unexpected=0)
+- 合并后更新 CHANGELOG 记录上游同步点
+- 上游 remote: `git@github.com:jingyaogong/minimind.git` (已配置为 `upstream`)
 
 ---
 
