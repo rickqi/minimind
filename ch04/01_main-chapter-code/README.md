@@ -9,7 +9,7 @@
 - 从零写出 naive → compact 的 self-attention
 - 画出 multi-head 的完整 shape 流程并注释每一步
 - 理解 RoPE 旋转、GQA 共享、QK-Norm 稳定化的原理
-- 逐行读懂 `model_minimind.py:91-134`
+- 逐行读懂 `model_minimind.py:~96-139` (@67f114a)
 
 ## 文件清单
 
@@ -22,9 +22,9 @@
 
 ## 对应 minimind 源码
 
-- `model/model_minimind.py:50-60`(`RMSNorm`)
-- `model/model_minimind.py:62-89`(`precompute_freqs_cis` / `apply_rotary_pos_emb` / `repeat_kv`)
-- `model/model_minimind.py:91-134`(`Attention` 类,全章拆解对象)
+- `model/model_minimind.py:~55-65` (@67f114a)(`RMSNorm`)
+- `model/model_minimind.py:~67-94` (@67f114a)(`precompute_freqs_cis` / `apply_rotary_pos_emb` / `repeat_kv`)
+- `model/model_minimind.py:~96-139` (@67f114a)(`Attention` 类,全章拆解对象)
 
 ---
 

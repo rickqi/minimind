@@ -62,14 +62,15 @@
    - `exercise-solutions.ipynb` —— 3 题 + 解答(独立)
    - `ch##.md` —— 中文导读(摘要 + 文件:行 引用)
 3. **前置准备**:见 [`setup/README.md`](./setup/README.md)。
-4. **需要 minimind 源码**:本教程引用 `/home/minimind` 的真实文件:行号,建议同时 clone 一份。
+4. **需要 minimind 源码**:本教程引用真实文件:符号 + 行号,建议 clone 本仓库的 `master` 分支一份。
 
 ---
 
 ## 约定
 
 - **语言**:中文为主,关键术语保留英文(RoPE / GQA / SwiGLU / KL 等)。
-- **行号基准**:所有 `文件:行` 引用以 minimind commit `512eed0` 为准。
+- **行号基准**:所有 `文件:行` 引用以本仓库 `master` 分支 commit `67f114a` 为准 (混合引用:函数/类名为主锚,`~行号` 为辅,标注 `@67f114a`)。
+- **Fork 说明**:本仓库 (`rickqi/minimind`) 是上游 `jingyaogong/minimind` 的 fork。教程教的是**默认模式** (`use_ple=False`),行为与上游原版完全一致;fork 扩展 (PLE 架构) 以 `🔧 Fork 扩展` sidebar 标注。
 - **代码注释**:每个张量 shape 变化都行内注释 `# Shape: (b, T, H) -> (b, T, n_h, d_h)`。
 
 > "亲手用乐高搭一架飞机,远比坐头等舱更令人兴奋。" —— minimind 项目哲学

@@ -23,8 +23,8 @@
 
 ## 对应 minimind 源码
 
-- `model/model_minimind.py:256-288`(手写 `generate`:KV cache + 采样策略 + EOS + streamer)
-- `model/model_minimind.py:234`(`GenerationMixin` 继承与覆盖)
+- `generate` — `model/model_minimind.py:~314-345` (@67f114a)(手写 generate:KV cache + 采样策略 + EOS + streamer)
+- `MiniMindForCausalLM` — `model/model_minimind.py:~266` (@67f114a)(`GenerationMixin` 继承与覆盖)
 
 ---
 

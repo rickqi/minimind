@@ -22,8 +22,8 @@
 
 ## 对应 minimind 源码
 
-- `eval_llm.py`(94 行,全文)
-- `model/model_minimind.py:256-288`(`generate` 方法,第 7 章详解)
+- `eval_llm.py`(98 行,全文)
+- `model/model_minimind.py:~314-345` (@67f114a)(`generate` 方法,第 7 章详解)
 
 ---
 

@@ -1,7 +1,7 @@
 # minimind 代码分析报告
 
 > 本报告是教程的"地图":把 minimind 代码库的结构、架构、训练流水线一次性梳理清楚。
-> 所有 `文件:行` 引用以 minimind commit `512eed0` 为准。
+> 所有 `文件:行` 引用以本仓库 master 分支 commit `67f114a` 为准 (混合引用:函数/类名为主锚,`~行号` 为辅)。
 > 教程每一章都会回指这里的行号。
 
 ---
@@ -17,18 +17,18 @@ minimind 根目录 `/home/minimind`,核心 Python 文件共 22 个:
 | `scripts/` | 推理 / 服务 / 评估工具(5 个 `.py`):OpenAI 兼容 API / Streamlit web demo / 模型转换 / 工具调用评估 / SDK 客户端 |
 | `dataset/` | 数据集类(5 种);`.jsonl` 数据文件按 `dataset.md` 下载到此 |
 | `images/` | 架构图(`LLM-structure.jpg` / `LLM-structure-moe.jpg` / loss 曲线 / 雷达图) |
-| `eval_llm.py` | 标准 CLI 推理入口(94 行) |
+| `eval_llm.py` | 标准 CLI 推理入口(98 行) |
 | `README.md` / `README_en.md` | 中 / 英项目文档(≈2000 行,含所有 RL 算法的数学推导) |
 
 **完整 .py 清单(22 个)**
 
 ```
-model/model_minimind.py          # 整个模型:config + transformer + generate(288 行)
+model/model_minimind.py          # 整个模型:config + transformer + generate(344 行, 🔧 含 PLE 扩展)
 model/model_lora.py              # LoRA 层 + apply/load/save/merge
 model/__init__.py                # 空
 dataset/lm_dataset.py            # PretrainDataset/SFTDataset/DPODataset/RLAIFDataset/AgentRLDataset
 dataset/__init__.py              # 空
-trainer/trainer_utils.py         # lr schedule / DDP / checkpoint / reward model wrapper
+trainer/trainer_utils.py         # lr schedule / DDP / checkpoint / reward model wrapper / 🔧 `_model_suffix()`
 trainer/train_pretrain.py        # 预训练
 trainer/train_full_sft.py        # 全参 SFT
 trainer/train_lora.py            # LoRA SFT
@@ -48,18 +48,18 @@ scripts/chat_api.py              # OpenAI SDK 客户端 demo
 
 ---
 
-## 2. 模型架构(`model/model_minimind.py`,288 行)
+## 2. 模型架构(`model/model_minimind.py`,344 行)
 
-整个模型在**一个 288 行的文件**里 —— 极适合教学。
+整个模型在**一个 344 行的文件**里 —— 极适合教学。
 
-### 2a. `MiniMindConfig`(第 10–45 行)
+### 2a. `MiniMindConfig` — model_minimind.py:~10 (@67f114a)
 
 继承 `transformers.PretrainedConfig`,`model_type = "minimind"`。默认值:
 
 | 字段 | 默认 | 行 | 说明 |
 |---|---|---|---|
-| `hidden_size` | 768 | 12 | d_model |
-| `num_hidden_layers` | 8 | 12 | 深度 |
+| `hidden_size` | 768 | 14 | d_model |
+| `num_hidden_layers` | 8 | 15 | 深度 |
 | `vocab_size` | 6400 | 18 | 极小(教学设计) |
 | `num_attention_heads` | 8 | 22 | q 头数 |
 | `num_key_value_heads` | 4 | 23 | **GQA**(2:1) |
@@ -69,31 +69,35 @@ scripts/chat_api.py              # OpenAI SDK 客户端 demo
 | `rope_theta` | 1e6 | 29 | 高 base,适配短训练 |
 | `tie_word_embeddings` | **True** | 30 | 输入/输出词表共享 |
 | `flash_attn` | True | 21 | 用 `scaled_dot_product_attention` |
-| `use_moe` | False | 12 | 切换 MoE FFN |
-| MoE: `num_experts` | 4 | 41 | |
-| MoE: `num_experts_per_tok` | 1 | 42 | top-1 路由 |
-| MoE: `router_aux_loss_coef` | 5e-4 | 45 | 负载均衡 |
+| `use_moe` | False | 16 | 切换 MoE FFN |
+| 🔧 `use_ple` | **False** | 34 | **Fork 扩展**:PLE 每层嵌入 (ESP32 部署),默认关闭不影响任何行为 |
+| 🔧 `ple_dim` | hidden_size//4 | 35 | **Fork 扩展**:PLE 嵌入维度 |
+| MoE: `num_experts` | 4 | 46 | |
+| MoE: `num_experts_per_tok` | 1 | 47 | top-1 路由 |
+| MoE: `router_aux_loss_coef` | 5e-4 | 50 | 负载均衡 |
 
-> **结构对齐 Qwen3 / Qwen3-MoE** —— 在 `scripts/convert_model.py:57-71` 可见权重直接映射进 `Qwen3Config` / `Qwen3MoeConfig`。
+> 🔧 **Fork 扩展 — PLE (Per-Layer Embedding)**: `use_ple`/`ple_dim` (行 31–35) 是本 fork 为 ESP32-S3 边缘部署新增的稀疏每层嵌入表。**默认 `False`,完全不执行任何 PLE 逻辑**,模型行为与上游 minimind 原版 100% 一致。详见 ch03 sidebar。
+>
+> **结构对齐 Qwen3 / Qwen3-MoE** —— 在 `scripts/convert_model.py` 可见权重直接映射进 `Qwen3Config` / `Qwen3MoeConfig`。
 
 ### 2b. 构件
 
 | 构件 | 行 | 要点 |
 |---|---|---|
-| **RMSNorm** | 50–60 | `x · rsqrt(mean(x²)+eps)`,上转 float32 再转回 |
-| **RoPE `precompute_freqs_cis`** | 62–78 | 按 `head_dim` 预算 cos/sin;`torch.cat([cos,cos])` 配合 `rotate_half` |
-| **`apply_rotary_pos_emb`** | 80–84 | rotate-half |
-| **`repeat_kv`** | 86–89 | GQA 扩展:`n_rep = q_heads // kv_heads = 2` |
-| **Attention** | 91–134 | q/k/v/o proj 无 bias;**QK-Norm**(`q_norm`/`k_norm` RMSNorm on head_dim);flash 路径 + 手写路径;**KV cache** 支持 |
-| **FeedForward** | 136–146 | **SwiGLU**:`down_proj(silu(gate_proj(x)) · up_proj(x))` |
-| **MOEFeedForward** | 148–176 | `gate` 线性路由;top-k;`index_add_` 派发;负载均衡 aux_loss |
-| **MiniMindBlock** | 178–194 | pre-norm 残差:`h + attn(ln(h))` / `h + mlp(ln(h))` |
+| **RMSNorm** | 55–65 | `x · rsqrt(mean(x²)+eps)`,上转 float32 再转回 |
+| **RoPE `precompute_freqs_cis`** | 67–83 | 按 `head_dim` 预算 cos/sin;`torch.cat([cos,cos])` 配合 `rotate_half` |
+| **`apply_rotary_pos_emb`** | 85–89 | rotate-half |
+| **`repeat_kv`** | 91–94 | GQA 扩展:`n_rep = q_heads // kv_heads = 2` |
+| **Attention** | 96–139 | q/k/v/o proj 无 bias;**QK-Norm**(`q_norm`/`k_norm` RMSNorm on head_dim);flash 路径 + 手写路径;**KV cache** 支持 |
+| **FeedForward** | 141–151 | **SwiGLU**:`down_proj(silu(gate_proj(x)) · up_proj(x))` |
+| **MOEFeedForward** | 153–181 | `gate` 线性路由;top-k;`index_add_` 派发;负载均衡 aux_loss |
+| **MiniMindBlock** | 183–208 | pre-norm 残差:`h + attn(ln(h))` / `h + mlp(ln(h))`;🔧 forward 签名含 `ple=None` (默认 None 时行为不变) |
 
 ### 2c. 模型与 forward
 
-- **`MiniMindModel`**(196–232):`embed_tokens` + N 个 block + final `norm`;RoPE buffer 非 persistent;forward 从 KV cache 算 `start_pos` 切正确 RoPE 窗口;累加 MoE aux_loss。
-- **`MiniMindForCausalLM`**(234–288):继承 `PreTrainedModel + GenerationMixin`;`_tied_weights_keys` 告知 HF 绑定关系;`lm_head` 与 `embed_tokens` 权重共享;`forward` 支持 `logits_to_keep`(RL 分块解码);CE loss `ignore_index=-100`。
-- **`generate`**(256–288):**手写采样器**(覆盖 `GenerationMixin.generate`)—— KV cache + temperature + repetition_penalty + top_k + top_p + multinomial + EOS mask + streamer。
+- **`MiniMindModel`** (~210–263):`embed_tokens` + N 个 block + final `norm`;RoPE buffer 非 persistent;forward 从 KV cache 算 `start_pos` 切正确 RoPE 窗口;累加 MoE aux_loss。🔧 `__init__` 在 `use_ple=True` 时额外创建 `ple_table`/`ple_model_proj`/`ple_proj_norm` (行 222–228);forward 用 `enumerate(self.layers)` 遍历 (行 252) 以支持按层 `ple[:,:,i]` 切片 —— **`ple=None` (默认) 时等价于 `zip(self.layers, past_key_values)`**。
+- **`MiniMindForCausalLM`** (~266–312):继承 `PreTrainedModel + GenerationMixin`;`_tied_weights_keys` 告知 HF 绑定关系;`lm_head` 与 `embed_tokens` 权重共享;`forward` 支持 `logits_to_keep`(RL 分块解码);CE loss `ignore_index=-100`。🔧 新增 `param_budget()` (行 281) 用于 PLE 三层参数预算统计。
+- **`generate`** (~314–344):**手写采样器**(覆盖 `GenerationMixin.generate`)—— KV cache + temperature + repetition_penalty + top_k + top_p + multinomial + EOS mask + streamer。
 
 **一次 forward 的张量流:**
 ```
@@ -130,7 +134,7 @@ input_ids [B,T]
 
 ## 4. 训练流水线(8 个阶段,共用一套骨架)
 
-**共享骨架**(`trainer_utils.py`):`init_distributed → config → autocast → wandb/swanlab → init_model → dataset → AdamW + get_lr 余弦 → resume → compile/DDP → epoch 循环(SkipBatchSampler)`。
+**共享骨架**(`trainer_utils.py`):`init_distributed → config → autocast → wandb/swanlab → init_model → dataset → AdamW + get_lr 余弦 → resume → compile/DDP → epoch 循环(SkipBatchSampler)`。🔧 checkpoint 命名统一走 `_model_suffix(lm_config)` (行 ~63),按 `_ple`/`_moe`/空 区分架构,默认 Dense 后缀为空 (行为与上游一致)。
 
 | 阶段 | 脚本 | 数据 | loss | lr | from_weight |
 |---|---|---|---|---|---|
@@ -152,7 +156,7 @@ input_ids [B,T]
 
 ## 5. 推理 / 评估
 
-- **`eval_llm.py`**(94 行):CLI 推理入口。`init_model` 两种加载路径(torch `.pth` vs HF `from_pretrained`);`apply_chat_template(open_thinking=...)`;`generate` 用 KV cache + `TextStreamer` 流式;默认 `temperature=0.85, top_p=0.95`。
+- **`eval_llm.py`**(98 行):CLI 推理入口。`init_model` 两种加载路径(torch `.pth` vs HF `from_pretrained`);`apply_chat_template(open_thinking=...)`;`generate` 用 KV cache + `TextStreamer` 流式;默认 `temperature=0.85, top_p=0.95`。
 - **`serve_openai_api.py`**:FastAPI on 8998;`/v1/chat/completions`;流式 SSE;解析 `<think>` → `reasoning_content`、`<tool_call>` → `tool_calls`(OpenAI 兼容)。
 - **`convert_model.py`**:`convert_torch2transformers` 把 minimind 权重映射进 `Qwen3ForCausalLM`(llama.cpp / vllm / ollama 可用);`convert_merge_base_lora` 合并 LoRA。
 
@@ -171,20 +175,22 @@ Config → Tokenizer → 构件(RMSNorm/RoPE/Attn/FFN) → Block+backbone+forwar
 
 ## 7. 教程章节映射
 
+> 行号区间为本仓库 master `67f114a`。`~` 表示近似,以函数/类名为主锚定位。
+
 | 章 | minimind 主文件 | 核心行号区间 |
 |---|---|---|
-| 1 | `eval_llm.py` | 全文 1–94 |
+| 1 | `eval_llm.py` | 全文 1–~100 (`init_model`~12, `main`~34) |
 | 2 | `train_tokenizer.py` + `tokenizer_config.json` | — |
-| 3 | `model_minimind.py` | 10–45 |
-| 4 | `model_minimind.py` | 50–134 |
-| 5 | `model_minimind.py` | 136–194 |
-| 6 | `model_minimind.py` | 196–253 |
-| 7 | `model_minimind.py` | 256–288 |
-| 8 | `lm_dataset.py:37-55` + `train_pretrain.py` + `trainer_utils.py` | — |
+| 3 | `model_minimind.py` | ~10–50 (`MiniMindConfig`, 🔧 PLE 字段 34–35) |
+| 4 | `model_minimind.py` | ~55–139 (`RMSNorm`/RoPE/`Attention`) |
+| 5 | `model_minimind.py` | ~141–208 (`FeedForward`/`MOEFeedForward`/`MiniMindBlock`, 🔧 forward 含 `ple=None`) |
+| 6 | `model_minimind.py` | ~210–312 (`MiniMindModel`/`MiniMindForCausalLM`, 🔧 forward 循环 `enumerate`) |
+| 7 | `model_minimind.py` | ~314–344 (`generate`) |
+| 8 | `lm_dataset.py:37-55` + `train_pretrain.py` + `trainer_utils.py` (`_model_suffix`~63) | — |
 | 9 | `lm_dataset.py:58-119` + `train_full_sft.py` | — |
 | 10 | `model_lora.py` + `train_lora.py` | — |
 | 11 | `serve_openai_api.py` + `convert_model.py` | — |
 | 12 | `lm_dataset.py:122-192` + `train_dpo.py` | — |
-| 13 | `rollout_engine.py` + `train_ppo.py` + `train_grpo.py` | — |
+| 13 | `rollout_engine.py` + `train_ppo.py` + `train_grpo.py` (🔧 PPO 有 autocast 数值修正) | — |
 | 14 | `train_agent.py` + `lm_dataset.py:226-252` | — |
-| 15 | `train_distillation.py` + `model_minimind.py:148-176` | — |
+| 15 | `train_distillation.py` + `model_minimind.py:~153-181` (`MOEFeedForward`) | — |

@@ -26,10 +26,10 @@
 
 ## 对应 minimind 源码
 
-- `model/model_minimind.py:196-232`(`MiniMindModel`:backbone)
-- `model/model_minimind.py:234-253`(`MiniMindForCausalLM`:lm_head + loss + tied weights)
+- `model/model_minimind.py:210-264`(`MiniMindModel`:backbone)
+- `model/model_minimind.py:266-310`(`MiniMindForCausalLM`:lm_head + loss + tied weights)
 
-> `generate`(256-288)是第 7 章的主题,本章不教。
+> `generate`(314-345)是第 7 章的主题,本章不教。
 
 ## 章节结构
 

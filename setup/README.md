@@ -5,11 +5,14 @@
 ## 1. 克隆 minimind
 
 ```bash
-git clone https://github.com/jingyaogong/minimind.git
+git clone https://github.com/rickqi/minimind.git
 cd minimind
+git checkout master   # 教程引用 master 分支的代码
 ```
 
-> 教程中的 `文件:行` 引用基于 commit `512eed0`。如果你的版本不同,行号可能略有偏移。
+> 教程中的 `文件:行` 引用基于 master 分支 commit `67f114a` (混合引用:函数名为主锚,`~行号`+`@67f114a` 为辅)。如果你的版本不同,行号可能略有偏移,用函数名定位即可。
+>
+> 本仓库是 `jingyaogong/minimind` 的 fork。教程教默认模式 (`use_ple=False`),行为与上游原版一致。
 
 ## 2. Python 环境
 
