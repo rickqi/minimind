@@ -159,6 +159,88 @@ python scripts/register_model.py --name "EmailAgent SFT H1 Dense" \
 
 ## 验证结果记录 (2026-08-09, AMD 890M ROCm)
 
+### 预热链优化 (②, 解决"收敛不足")
+
+新增 `train_pretrain.sh` 预热脚本, 验证 pretrain → SFT 三段链:
+
+| 配置 | 手段1 Dense loss |
+|---|---|
+| 从零 SFT (400条×2ep) | 3.79 |
+| **pretrain 预热 (713条×3ep) → SFT (400条×2ep)** | **2.45** (↓35%) |
+
+**结论**: 预热链显著提升收敛 (loss 3.79→2.45)。用法:
+```bash
+bash scripts/train_pretrain.sh 1 pretrain_email.jsonl 3 256 6    # 手段1 预热
+bash scripts/train_mode1_default_sft.sh sft_email_mixed_400.jsonl 2 256 6 email_pretrain_1  # 预热链 SFT
+```
+
+### 评估科学性 (④, 2026-08-09)
+
+### 发现的数据问题 (评估暴露)
+
+EmailAgent sft_tasks 的**任务分布失衡**: 1414 条抽样训练集中分类任务仅 33 条 (2.3%),
+其余是摘要/回复任务 → 混合训练模型分类准确率 **0/8** (只学会"收到,关于「...」"回复模板)。
+
+### 解决: 分类专用训练集 + 严格 hold-out
+
+```bash
+# 从全量 1464 条分类任务切分 80/20 (无重叠)
+# 训练 1140 条 / 测试 284 条
+python3 构建脚本 → dataset/sft_email_classify.jsonl + test_email_classify_strict.jsonl
+```
+
+### 结果 (预热链 + 分类专用训练)
+
+| 配置 | 训练 loss | 严格测试集准确率 |
+|---|---|---|
+| 混合数据 (33 条分类) | 3.38 | **0/8** |
+| 分类专用 (1140 条×3ep) | 0.23 | **30/30 = 100%** |
+
+**结论**: 任务分布是分类能力的关键; 独立测试集 (无重叠) + 定量指标 (准确率) 是评估科学性的核心。
+eval_email.py 已内置分类准确率计算 (核心标签前缀匹配)。
+
+## PLE1 部署验证 (③, 2026-08-09)
+
+PLE 手段的完整部署链路首次跑通 (H1, email_sft_ple_h256):
+
+| 步骤 | 命令 | 结果 |
+|---|---|---|
+| 量化 | `python scripts/quantize_ple.py --hidden_size 256 --num_hidden_layers 6 --ple_dim 96 --weight email_sft_ple_h256 --save_dir out --export_dir models --group 32 --device cpu --val_iters 10 --data_path skills/minimind-training/dataset/pretrain_email.jsonl` | int4 deg **+0.0068** (误差可忽略) |
+| 导出 | `python scripts/export_ple1.py --hidden_size 256 --num_hidden_layers 6 --ple_dim 96 --num_attention_heads 8 --num_key_value_heads 4 --weight email_sft_ple_h256 --save_dir out --out_dir models --seq_len 64` | PLE1 **6.31MB** (89 tensors) + golden |
+| 转换 | `python chinese_v5/convert_h2.py --in ..._ple1.bin --out /tmp/model_llm.bin --bits 4` | 6.01MB, 89 tensors 匹配 |
+| 验证 | `gcc verify_h2.c && /tmp/verify_h2 model_llm.bin golden.txt` | **PASS, max abs diff 0.00000** |
+
+**结论**: PLE 部署链路完整可用, 精度无损 (C 与 PyTorch 逐位一致)。这是 PLE 手段相对 Dense 的核心价值: 训练期等价, 部署期提供 int4 量化 + PLE1 扁平格式 (适配 ESP32 flash 驻留)。
+
+注意: `quantize_ple.py` 默认 data_path 是官方 `pretrain_t2t_mini.jsonl` (未下载会报错), 需用本地数据覆盖。
+
+## 邮件域 RAFT 适配 (①, 2026-08-09)
+
+医学 RAFT (`build_medical_raft.py`) 依赖知识库 QA 对 + DeepSeek B2 合成, **不适用于 EmailAgent 数据** (邮件任务无独立证据源, B2 需 API key)。
+
+新增 `build_email_raft.py`: 邮件域 RAFT — **证据 = 邮件原文** (system 注入), 训练模型基于给定邮件执行任务:
+
+```bash
+python scripts/build_email_raft.py  # → dataset/sft_email_raft.jsonl (2000 条)
+```
+
+- 有证据样本 (70%): system 注入邮件正文 + user 任务指令 + assistant 答案
+- 无证据样本 (30%): 直接给任务 (保内在能力, 防 RAFT 遗忘)
+- 已验证 SFTDataset 可加载
+
+## ROCm 生成规避 (评估发现)
+
+AMD 890M + torch rocm 上推理有两坑, eval_email.py 已内置规避:
+1. **KV cache 生成卡死** → `use_cache=False`
+2. **multinomial 长序列采样死循环** → `do_sample=False` (argmax)
+3. **cuda 推理不可靠** → 默认 `--device cpu` (真 NVIDIA GPU 可 `--device cuda`)
+
+### 模型质量发现 (换行循环)
+
+预热链模型对分类任务输出 token 234 (`\n`) 循环 — 400条×2ep SFT 不足以学会分类。**生成功能正常**, 属训练不足。生产需更多 SFT 数据 (3262 全量) + 更多 epochs。
+
+## 验证结果记录 (2026-08-09, 第一轮+第二轮)
+
 ### 第一轮 (旧数据 3432条, lr 2e-5→5e-4 优化)
 
 | 项 | 手段1 Dense | 手段2 PLE |

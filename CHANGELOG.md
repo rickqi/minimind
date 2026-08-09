@@ -3,6 +3,11 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **训练 skill 四步优化迭代** (2026-08-09)
+  - **② pretrain 预热链**: 新增 `train_pretrain.sh`; 预热 (713条×3ep) → SFT 链 loss 3.79→**2.45** (↓35%); 训练脚本支持 `from_weight` 参数; eval_email.py 修复 ROCm 生成卡死 (KV cache + multinomial 双规避, 默认 CPU)
+  - **① 邮件域 RAFT**: 新增 `build_email_raft.py` (证据=邮件正文, 2000 条, SFTDataset 校验通过); 说明医学 B2/RAFT 不适用邮件数据 (需 API key + 知识库证据)
+  - **③ PLE1 部署验证**: 完整链路首通 — int4 量化 (deg +0.0068) → PLE1 导出 (6.31MB) → convert_h2 → verify_h2 **PASS diff 0.00000** (C 与 PyTorch 逐位一致); 证明 PLE 部署价值
+  - **④ 评估科学性**: 新增独立测试集 (严格 80/20 hold-out) + 分类准确率指标; **发现数据分布失衡** (抽样训练集分类仅 2.3% → 混合模型 0/8); 分类专用训练集 (1140条×3ep) 严格测试 **30/30 = 100%**
 - **新增 minimind-training 训练技能 (skills/minimind-training/)** (2026-08-09)
   - 标准 skills 结构: `SKILL.md` (frontmatter: name/description/license) + `dataset/` + `scripts/`
   - 覆盖两种训练手段完整流程: 手段1 默认 Dense (`--use_ple 0`) / 手段2 PLE (`--use_ple 1 --ple_dim N`)

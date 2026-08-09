@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # train_mode2_ple_sft.sh — 手段2: 自有数据分支 (PLE, use_ple=1) SFT 训练
-# 用法: bash scripts/train_mode2_ple_sft.sh [data_file] [epochs] [hidden_size] [layers] [ple_dim]
+# 用法: bash scripts/train_mode2_ple_sft.sh [data_file] [epochs] [hidden_size] [layers] [ple_dim] [from_weight]
+#   from_weight = none (从零) 或 email_pretrain_2 (预热链: 从 PLE pretrain 权重续训)
 set -euo pipefail
 
 DATA_FILE=${1:-sft_email_mixed_400.jsonl}
@@ -8,6 +9,7 @@ EPOCHS=${2:-2}
 HIDDEN=${3:-256}
 LAYERS=${4:-6}
 PLE_DIM=${5:-96}
+FROM_WEIGHT=${6:-none}
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SAVE_WEIGHT="email_sft_ple_h${HIDDEN}"
@@ -33,7 +35,7 @@ python3 -u train_full_sft.py \
     --epochs "${EPOCHS}" \
     --learning_rate 5e-4 \
     --data_path "${SKILL_DIR}/dataset/${DATA_FILE}" \
-    --from_weight none \
+    --from_weight "${FROM_WEIGHT}" \
     --save_weight "${SAVE_WEIGHT}" \
     --save_dir "../out" \
     --save_interval 1000 \
