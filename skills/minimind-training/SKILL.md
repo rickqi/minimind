@@ -157,6 +157,25 @@ python scripts/register_model.py --name "EmailAgent SFT H1 Dense" \
 4. **RAFT 增强** (需证据问答): `build_medical_raft.py --no-evidence-ratio 0.3 --negative-ratio 0.15` 生成证据数据后微调
 5. **部署链路** (ESP32): `quantize_ple.py` (int4 group=32) → `export_ple1.py` → `convert_h2.py` → `verify_h2.c` (PASS 阈值 maxabs<0.02)
 
+## 全量训练验证 (2026-08-09 22:30)
+
+EmailAgent 新数据全量 (sft_train 40,680 条过滤后), 两种手段各训练:
+
+| 手段 | 配置 | 最终 loss | 分类精确率 (30条验证集) | 质量检查 |
+|---|---|---|---|---|
+| **手段1 Dense** | 全量×1ep from 预热 | **1.44** | **80%** | ✅ missing=0/unexpected=0 |
+| **手段2 PLE** | 全量×1ep from PLE预热 | **1.14** | 53% | ✅ missing=0/unexpected=0 |
+
+**多场景推理** (全量模型, 验证集样本):
+- 分类: 两手段均精确命中 gold (合同审核)
+- 总结: 语义相关, 小模型有重复 (H1 局限)
+- 回复: 模板完全正确 "收到,关于「...」一事,我们将尽快跟进处理"
+
+**关键发现**:
+- 全量数据收敛显著 (小规模 loss 4.4 → 全量 1.14/1.44)
+- **全量下 Dense 分类精度 > PLE** (80% vs 53%) — 与小规模 (相当) 不同; PLE 表参数在全量训练下未体现分类优势
+- Dense 训练出现 1 次瞬时 loss=nan 后自愈 (bfloat16 偶发数值尖峰)
+
 ## 新数据重训验证 (2026-08-09 21:51)
 
 EmailAgent 数据源大幅更新 (19:51-19:59 重新生成, **量增 8x**):

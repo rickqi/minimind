@@ -3,6 +3,21 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **EmailAgent 全量 PLE H1 (40680条)** | `out/email_sft_ple_h256_256_ple.pth` | 24.88MB | sft_train 全量 (40680条×1ep, from PLE预热) | - | **1.14**
+  - 说明: verify 分类精确 53% (30条验证集)
+
+
+- **EmailAgent 全量 Dense H1 (40680条)** | `out/email_sft_dense_h256_256.pth` | 16.61MB | sft_train 全量 (40680条×1ep, from 预热) | - | **1.44**
+  - 说明: verify 分类精确 80% (30条验证集)
+
+
+- **EmailAgent 分类 SFT H1 (v2数据)** | `out/email_sft_dense_h256_256.pth` | 16.61MB | sft classify v2 (2000条×3ep) | - | **0.29**
+  - 说明: verify 严格测试集 精确 74%
+
+
+- **EmailAgent pretrain H1 (预热)** | `out/email_pretrain_1_256.pth` | 16.61MB | pretrain_email v2 (2000条×2ep) | - | **4.14**
+
+
 - **新数据重训验证 (数据源 8x 扩充)** (2026-08-09 21:51)
   - EmailAgent 数据更新: sft_tasks 29322 / sft_threads 1045 / dpo 1235 / pretrain 5784 (量增 8x); health_score 84.8→**99.0**
   - **B2 QA 合成解锁** (6333 条) + **RAFT 数据解锁** (6333 条) — 之前因 API key 阻塞

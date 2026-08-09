@@ -232,3 +232,10 @@ python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 -   说明: PLE1: `models/full_sft_h2_raft_v4_h384_ple1.bin` (14.73MB) | int4: `models/full_sft_h2_raft_v4_384_int4_g32.pth` (26.58MB) | 部署: `../esp32-ai/firmware/model_v5/H2/model_llm.bin` (14.73MB) | verify PASS diff 0.00001
 - **H1 RAFT v4** | `out/full_sft_h1_raft_v4_256_ple.pth` | 24.88MB | sft_medical_raft (8K, 负样本+医学过滤) | - | **2.90**
   - 说明: PLE1: `models/full_sft_h1_raft_v4_h256_ple1.bin` (6.31MB) | 部署: `../esp32-ai/firmware/model_v5/H1/model_llm.bin` (6.31MB) | verify PASS diff 0.00000
+- **EmailAgent pretrain H1 (预热)** | `out/email_pretrain_1_256.pth` | 16.61MB | pretrain_email v2 (2000条×2ep) | - | **4.14**
+- **EmailAgent 分类 SFT H1 (v2数据)** | `out/email_sft_dense_h256_256.pth` | 16.61MB | sft classify v2 (2000条×3ep) | - | **0.29**
+-   说明: verify 严格测试集 精确 74%
+- **EmailAgent 全量 Dense H1 (40680条)** | `out/email_sft_dense_h256_256.pth` | 16.61MB | sft_train 全量 (40680条×1ep, from 预热) | - | **1.44**
+-   说明: verify 分类精确 80% (30条验证集)
+- **EmailAgent 全量 PLE H1 (40680条)** | `out/email_sft_ple_h256_256_ple.pth` | 24.88MB | sft_train 全量 (40680条×1ep, from PLE预热) | - | **1.14**
+-   说明: verify 分类精确 53% (30条验证集)
