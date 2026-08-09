@@ -17,3 +17,20 @@ skills/minimind-training/dataset/sft_email_train_full.jsonl
 skills/minimind-training/dataset/*_v2_*.jsonl
 # EmailAgent 数据集 (可从源数据用 prepare_email_data.py 重新生成)
 skills/minimind-training/dataset/*.jsonl
+
+# 敏感信息 (API key / 配置 / 环境变量)
+.env
+.env.*
+*_api_key*
+*.key
+*secret*
+config.local.*
+settings.local.*
+
+# 模型权重与部署产物
+*.pth
+*.bin
+*.npz
+*.pt
+*.onnx
+*.log
