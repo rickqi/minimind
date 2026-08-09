@@ -9,3 +9,6 @@ dataset/*.jsonl
 dataset/*.bin
 dataset/*.csv
 models/
+# skill 训练临时产物
+skills/minimind-training/dataset/sft_email_mixed_*.jsonl
+skills/minimind-training/dataset/*_400.jsonl

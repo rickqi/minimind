@@ -3,6 +3,17 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **新增 minimind-training 训练技能 (skills/minimind-training/)** (2026-08-09)
+  - 标准 skills 结构: `SKILL.md` (frontmatter: name/description/license) + `dataset/` + `scripts/`
+  - 覆盖两种训练手段完整流程: 手段1 默认 Dense (`--use_ple 0`) / 手段2 PLE (`--use_ple 1 --ple_dim N`)
+  - 脚本: `prepare_email_data.py` (EmailAgent 数据剥离多余字段 + SFTDataset 实测校验, 修复 `CastError: column names don't match`) / `train_mode1_default_sft.sh` / `train_mode2_ple_sft.sh` / `verify_weights.py` (严格加载校验 + PLE 自动检测 + param_budget) / `eval_email.py` (问答评估) / `run_pipeline.py` (统一管道: env→data→train→verify→eval 幂等编排)
+  - 双手段验证: H1 (d256/l6) 从零 SFT, EmailAgent 数据 (sft_email_mixed 3262 条)
+    - 手段1 Dense: 6.66M 参数, loss 3.79 (400条×2ep, lr=5e-4), 权重 15.84MB
+    - 手段2 PLE: 10.79M 参数 (core 5.46M/table 3.69M/stream 1.64M), loss 3.74, 权重 23.73MB
+    - 质量检查均通过 (missing=0 unexpected=0); 问答输出连贯中文片段
+  - 关键优化: 从零 SFT lr 必须用 5e-4 (pretrain 同款), 误用 RAFT 微调 lr 2e-5 收敛慢 ~10 倍 (7.3→4.4→3.8 三轮演进验证)
+  - 数据质量审计: EmailAgent 新增 `post_analysis.json` (health 84.8, 四阶段 PII/签名泄漏 0, b1 有 P1 碎片化问题待修)
+  - B2/RAFT 数据管线仍阻塞 (LLM API key 未配置)
 - **AGENTS.md 补充 fork 关系说明** (2026-08-07)
   - 明确: 本项目是官方上游 jingyaogong/minimind 的 fork (同根 a18d84e, 继承 12 位上游作者历史, 仅 rick qi 为本地作者)
   - upstream remote 已配置, 上游历史已通过 fe19dfa 合入 master
