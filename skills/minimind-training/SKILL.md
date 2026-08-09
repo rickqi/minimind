@@ -157,6 +157,31 @@ python scripts/register_model.py --name "EmailAgent SFT H1 Dense" \
 4. **RAFT 增强** (需证据问答): `build_medical_raft.py --no-evidence-ratio 0.3 --negative-ratio 0.15` 生成证据数据后微调
 5. **部署链路** (ESP32): `quantize_ple.py` (int4 group=32) → `export_ple1.py` → `convert_h2.py` → `verify_h2.c` (PASS 阈值 maxabs<0.02)
 
+## 新数据重训验证 (2026-08-09 21:51)
+
+EmailAgent 数据源大幅更新 (19:51-19:59 重新生成, **量增 8x**):
+
+| 数据集 | 旧 (skill) | 新 (数据源) | 变化 |
+|---|---|---|---|
+| sft_tasks | 3,577 | 29,322 | 8.2x |
+| sft_threads | 131 | 1,045 | 8x |
+| dpo | 149 | 1,235 | 8.3x |
+| pretrain | 713 | 5,784 | 8.1x |
+| **sft_train (split/)** | — | **40,881** | 新增 (EmailAgent 自动切分) |
+| **B2 QA 合成** | 0 | **6,333** | 🔓 解锁 (API key 已配) |
+| **RAFT 数据** | 0 | **6,333** | 🔓 解锁 |
+| health_score | 84.8 | **99.0** | 质量提升 |
+
+**用 skill 重训结果** (预热链 + 分类 2000条×3ep):
+- 新数据预热 (2000条×2ep): loss 4.14
+- 分类训练 (from 新预热): loss 0.29
+- **独立验证集** (split/sft_val 552 条分类, 无重叠): 标签命中 **49/50=98%**, 精确匹配 **37/50=74%**
+
+**关键改进**:
+- `prepare_email_data.py` 优先导入 EmailAgent `split/sft_train.jsonl` (40,881 条全任务)
+- 验证集改用 EmailAgent 官方 `split/sft_val` 切分 (更严谨, 无 hold-out 偏差)
+- 严格评估用**精确匹配** (预测==gold), 非仅标签命中
+
 ## 使用指南验证记录 (2026-08-09)
 
 三个场景逐一实测验证, 发现并修复 3 个问题:

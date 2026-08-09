@@ -89,6 +89,14 @@ def main():
 
     report = {}
 
+    # 0. 优先使用 EmailAgent split/ 切分 (sft_train = 全部任务合并训练集)
+    src_sft_train = os.path.join(args.src, "split", "sft_train.jsonl")
+    out_sft_train = os.path.join(args.out, "sft_email_train_full.jsonl")
+    if os.path.exists(src_sft_train):
+        total, kept = convert_sft(src_sft_train, out_sft_train)
+        report["sft_email_train_full"] = {"total": total, "kept": kept}
+        print(f"  sft_train (split/): {kept}/{total} 条 → {out_sft_train}")
+
     # 1. SFT tasks
     src_tasks = os.path.join(args.src, "sft_tasks", "sft_email_tasks.jsonl")
     out_tasks = os.path.join(args.out, "sft_email_tasks.jsonl")

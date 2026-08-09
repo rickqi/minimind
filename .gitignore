@@ -12,3 +12,8 @@ models/
 # skill 训练临时产物
 skills/minimind-training/dataset/sft_email_mixed_*.jsonl
 skills/minimind-training/dataset/*_400.jsonl
+# 大训练集 (可从 EmailAgent split/ 重新生成)
+skills/minimind-training/dataset/sft_email_train_full.jsonl
+skills/minimind-training/dataset/*_v2_*.jsonl
+# EmailAgent 数据集 (可从源数据用 prepare_email_data.py 重新生成)
+skills/minimind-training/dataset/*.jsonl

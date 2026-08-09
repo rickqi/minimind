@@ -3,6 +3,12 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **新数据重训验证 (数据源 8x 扩充)** (2026-08-09 21:51)
+  - EmailAgent 数据更新: sft_tasks 29322 / sft_threads 1045 / dpo 1235 / pretrain 5784 (量增 8x); health_score 84.8→**99.0**
+  - **B2 QA 合成解锁** (6333 条) + **RAFT 数据解锁** (6333 条) — 之前因 API key 阻塞
+  - EmailAgent 新增 `split/` 自动切分 (sft_train 40881 / sft_val 2152)
+  - `prepare_email_data.py` 优先导入 split/sft_train; 验证集改用官方 sft_val 切分
+  - 重训验证 (预热链 + 分类 2000条×3ep): 独立验证集标签命中 98%, **精确匹配 74%** (严谨指标)
 - **使用指南验证 + 修复** (2026-08-09)
   - 三场景实测验证: run_pipeline 全流程 / 预热链 / 分类专项 (60/60=100%) / PLE 部署 (PASS diff 0.00000)
   - 修复 run_pipeline env 阶段逻辑 bug (--stage env 从未执行) + GPU 检测 amdsmi 挂起
