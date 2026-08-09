@@ -157,6 +157,23 @@ python scripts/register_model.py --name "EmailAgent SFT H1 Dense" \
 4. **RAFT 增强** (需证据问答): `build_medical_raft.py --no-evidence-ratio 0.3 --negative-ratio 0.15` 生成证据数据后微调
 5. **部署链路** (ESP32): `quantize_ple.py` (int4 group=32) → `export_ple1.py` → `convert_h2.py` → `verify_h2.c` (PASS 阈值 maxabs<0.02)
 
+## 使用指南验证记录 (2026-08-09)
+
+三个场景逐一实测验证, 发现并修复 3 个问题:
+
+| 场景 | 验证结果 | 修复 |
+|---|---|---|
+| 1. run_pipeline 全流程 | env/data/train/verify/eval 五阶段全通 | **env 阶段逻辑 bug** (--stage env 从未执行); GPU 检测 amdsmi 挂起 |
+| 1. 预热链 | train_pretrain.sh 可执行, from_weight SFT 产物可评估 | sft_email_mixed_400.jsonl 重建 (run_pipeline 默认依赖) |
+| 2. 分类专项 | 严格测试集 60/60 = 100% 准确率 | **eval_email 加 --all** (全量评估独立测试集) |
+| 3. PLE 部署 | 4 步全通, verify PASS diff 0.00000 | 无 |
+
+**修复内容**:
+- `run_pipeline.py`: `--stage env` 时 env 实际执行; 非 env stage 自动前置 env; all 模式去重
+- `run_pipeline.py`: GPU 检测改为 `is_available()` 后条件调用 `get_device_name` (规避 amdsmi 挂起)
+- `eval_email.py`: 新增 `--all` 参数 (全量评估, 不抽样)
+- 数据集: `sft_email_mixed_400.jsonl` 重建 (400 条)
+
 ## 验证结果记录 (2026-08-09, AMD 890M ROCm)
 
 ### 预热链优化 (②, 解决"收敛不足")

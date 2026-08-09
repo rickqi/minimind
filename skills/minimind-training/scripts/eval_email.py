@@ -24,8 +24,8 @@ from model.model_minimind import MiniMindConfig, MiniMindForCausalLM
 PROJECT_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "..")
 
 
-def build_test_set(src_path: str, per_type: int = 2, seed: int = 42) -> list:
-    """从 SFT 数据中按 task_type 抽取测试问题"""
+def build_test_set(src_path: str, per_type: int = 2, seed: int = 42, all_samples: bool = False) -> list:
+    """从 SFT 数据中按 task_type 抽取测试问题; all_samples=True 时不抽样 (独立测试集)"""
     random.seed(seed)
     by_type = {}
     for line in open(src_path, encoding="utf-8"):
@@ -38,7 +38,8 @@ def build_test_set(src_path: str, per_type: int = 2, seed: int = 42) -> list:
         by_type.setdefault(t, []).append(q)
     tests = []
     for t, qs in by_type.items():
-        for q in random.sample(qs, min(per_type, len(qs))):
+        picked = qs if all_samples else random.sample(qs, min(per_type, len(qs)))
+        for q in picked:
             tests.append({"task_type": t, "question": q})
     return tests
 
@@ -53,6 +54,7 @@ def main():
     ap.add_argument("--max_new_tokens", type=int, default=120)
     ap.add_argument("--data", default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dataset", "sft_email_tasks.jsonl"))
     ap.add_argument("--per_type", type=int, default=2)
+    ap.add_argument("--all", action="store_true", help="评估全部样本 (不抽样, 用于独立测试集)")
     ap.add_argument("--device", default="cpu", help="评估设备: cpu (默认, ROCm 生成稳定) / cuda")
     args = ap.parse_args()
 
@@ -72,7 +74,7 @@ def main():
     model = model.to(device)
     model.eval()
 
-    tests = build_test_set(args.data, per_type=args.per_type)
+    tests = build_test_set(args.data, per_type=args.per_type, all_samples=args.all)
     print(f"=== 评估 {os.path.basename(args.weight)} ({device}) ===")
     print(f"测试集: {len(tests)} 问 ({args.data})\n")
 

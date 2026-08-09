@@ -3,6 +3,11 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **使用指南验证 + 修复** (2026-08-09)
+  - 三场景实测验证: run_pipeline 全流程 / 预热链 / 分类专项 (60/60=100%) / PLE 部署 (PASS diff 0.00000)
+  - 修复 run_pipeline env 阶段逻辑 bug (--stage env 从未执行) + GPU 检测 amdsmi 挂起
+  - eval_email 新增 `--all` 参数 (全量评估独立测试集, 不抽样)
+  - 数据更新: sft_email_tasks 3579→3577 条 (EmailAgent 17:00 重新生成)
 - **训练 skill 四步优化迭代** (2026-08-09)
   - **② pretrain 预热链**: 新增 `train_pretrain.sh`; 预热 (713条×3ep) → SFT 链 loss 3.79→**2.45** (↓35%); 训练脚本支持 `from_weight` 参数; eval_email.py 修复 ROCm 生成卡死 (KV cache + multinomial 双规避, 默认 CPU)
   - **① 邮件域 RAFT**: 新增 `build_email_raft.py` (证据=邮件正文, 2000 条, SFTDataset 校验通过); 说明医学 B2/RAFT 不适用邮件数据 (需 API key + 知识库证据)

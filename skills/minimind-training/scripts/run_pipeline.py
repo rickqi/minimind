@@ -55,7 +55,9 @@ def stage_env():
             ok = False
     try:
         import torch
-        print(f"  ✅ GPU: {torch.cuda.get_device_name(0)} / CUDA={torch.cuda.is_available()}")
+        cuda_ok = torch.cuda.is_available()
+        name = torch.cuda.get_device_name(0) if cuda_ok else "N/A"
+        print(f"  ✅ GPU: {name} / CUDA={cuda_ok}")
     except Exception as e:
         print(f"  ⚠️ GPU 检测失败: {e}")
     tok = os.path.join(PROJECT_ROOT, "model", "tokenizer.json")
@@ -141,14 +143,15 @@ def main():
     order = ["env", "data", "train", "verify", "eval"]
     targets = order if args.stage == "all" else [args.stage]
 
-    # env 是前置, 任何 stage 都先跑
-    if args.stage != "env":
+    # env 是前置: 单独指定非 env stage 时先自动跑 env (all 模式 targets 已含 env)
+    if args.stage not in ("env", "all"):
         stage_env()
 
     for s in targets:
         if s == "env":
-            continue
-        stages[s]()
+            stage_env()
+        else:
+            stages[s]()
 
     print(f"\n=== 管道完成 ({cfg['name']}) ===")
 
