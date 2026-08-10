@@ -3,6 +3,11 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **附件增强预训练: COS 备份 + 训练验证** (2026-08-11)
+  - **COS 备份**: `cos://ins-kq6zz7wo/backups/email-pretrain/pretrain_email_v2_20260811_004129.zip` (724MB, 3.5GB→9x 压缩); 新增 `scripts/backup_any.py` 通用备份
+  - **抽样子集**: `pretrain_email_200k.jsonl` (199,931 条: 表格 5 万 + 长文档 3 万 + 普通 12 万) + `pretrain_email_10k.jsonl` 快速验证集
+  - **训练验证**: 10k 子集 H1 预热 loss 5.0→**2.77** (AMD 890M 验证收敛, 权重 16.6MB 质量检查通过)
+  - **性能结论**: 附件长文本使训练慢 (~30s/step); 20 万全量 12 天不可行, **全量 169 万需 GPU**
 - **附件富矿注入预训练语料 (A 阶段)** (2026-08-11)
   - **数据**: `pretrain_email_full_v2.jsonl` (1,690,017 样本, 3.5GB, 位于 EmailAgent/training_data/pretrain/)
   - **断点打通**: 6 管线附件利用率 0% → 新增 raw/ 加载器 (common.py 4 函数) + C RAFT/B2 QA/A pretrain 接入
