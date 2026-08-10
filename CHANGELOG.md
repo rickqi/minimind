@@ -4,8 +4,8 @@
 
 ## [Unreleased]
 - **附件增强预训练: COS 备份 + 训练验证** (2026-08-11)
-  - **COS 备份**: `cos://ins-kq6zz7wo/backups/email-pretrain/pretrain_email_v2_20260811_004129.zip` (724MB, 3.5GB→9x 压缩); 新增 `scripts/backup_any.py` 通用备份
-  - **抽样子集**: `pretrain_email_200k.jsonl` (199,931 条: 表格 5 万 + 长文档 3 万 + 普通 12 万) + `pretrain_email_10k.jsonl` 快速验证集
+  - **COS 备份**: `cos://ins-kq6zz7wo/backups/email-pretrain/pretrain_email_v2_20260811_004129.zip` (724MB, 3.5GB→9x 压缩); 新增 `scripts/backup_any.py` 通用备份 (含 `--list` 查询, 已验证 1 备份 0.71GB)
+  - **抽样子集**: `pretrain_email_200k.jsonl` (199,931 条: 表格 5 万 + 长文档 3 万 + 普通 12 万) + `pretrain_email_10k.jsonl` 快速验证集 (构成一致: 表格 ~25% + 长文档 ~15%)
   - **训练验证**: 10k 子集 H1 预热 loss 5.0→**2.77** (AMD 890M 验证收敛, 权重 16.6MB 质量检查通过)
   - **性能结论**: 附件长文本使训练慢 (~30s/step); 20 万全量 12 天不可行, **全量 169 万需 GPU**
 - **附件富矿注入预训练语料 (A 阶段)** (2026-08-11)
