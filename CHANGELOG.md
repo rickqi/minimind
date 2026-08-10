@@ -71,7 +71,6 @@
   - 关键优化: 从零 SFT lr 必须用 5e-4 (pretrain 同款), 误用 RAFT 微调 lr 2e-5 收敛慢 ~10 倍 (7.3→4.4→3.8 三轮演进验证)
   - 数据质量审计: EmailAgent 新增 `post_analysis.json` (health 84.8, 四阶段 PII/签名泄漏 0, b1 有 P1 碎片化问题待修)
   - B2/RAFT 数据管线仍阻塞 (LLM API key 未配置)
->>>>>>> origin/master
 - **AGENTS.md 补充 fork 关系说明** (2026-08-07)
   - 明确: 本项目是官方上游 jingyaogong/minimind 的 fork (同根 a18d84e, 继承 12 位上游作者历史, 仅 rick qi 为本地作者)
   - upstream remote 已配置, 上游历史已通过 fe19dfa 合入 master
