@@ -428,3 +428,4 @@ python skills/minimind-training/scripts/run_pipeline.py --mode 2 --stage verify 
     - **前置检查 (每次 DPO 训练前必做)**: `DPODataset[i]['mask_chosen'].sum()>0` (抽样 5 样本), 防静默空转
     - **修复**: max_seq_len 需覆盖 assistant 段位置 (附件注入 500 字 + max_seq_len 2048 实测有效, loss 0.69→0.046)
     - **⚠️ 非最优, 需持续验证**: 附件 500 字截断损失信息; 健康集仅 910 对 (过滤 87%); loss 0.008 可能过拟合。持续扫描 max_seq_len / 注入长度消融 / 健康集扩充 / H2 验证 (详见 docs/DPO_ANALYSIS.md §6 调优关注点)
+    - **⚠️ 过拟合风险 (实测)**: 修复后 3ep 训练 loss 到 0.0000 (记忆而非泛化), 附件问答反而退化 → **建议 1-2 ep 早停** (Epoch 1 末 loss 0.008 附近泛化最佳); H1 小模型 DPO 过拟合窗口窄, 收益有限
