@@ -3,6 +3,14 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **dataset 备份/恢复能力 (COS)** (2026-08-10)
+  - 新增 `scripts/backup_dataset.py`: 打包 dataset/ → `minimind-dataset-backup_{时间戳}.tar.gz` → 上传腾讯云 COS (桶 ins-kq6zz7wo-1313469539, 广州区域)
+  - 新增 `scripts/restore_dataset.py`: 列出 COS 备份 → 下载 → 解压恢复 (含恢复前自动备份当前数据)
+  - **唯一时间戳**: 每次备份生成 `YYYYMMDD_HHMMSS` 唯一名, 不覆盖历史
+  - **前缀隔离**: `minimind-dataset-backup_*` 与桶内已有 `data/training_data` / `email_knowledge` 备份不冲突
+  - 密钥存 `.env.cosine` (gitignored), 不入库
+  - 实测: 4.1GB 打包 1488MB 上传成功; 恢复后 10 个 jsonl 条数完整 (验证 OK)
+  - 注: 修复了 restore 脚本 dry-run 误删数据的 bug (删除逻辑移至 dry_run 判断之后)
 - **origin/master 双向分叉合并** (2026-08-10, commit `f46cf17`)
   - 本地 (405 提交: PLE/医疗/RAG) 与 origin (415 提交: EmailAgent skill/DPO 附件增强) 双向分叉
   - 通过 merge-origin 分支合并, 解决 3 个文档冲突 (.gitignore/CHANGELOG/MODELS.md)
