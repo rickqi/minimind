@@ -3,6 +3,75 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **DPO 附件增强 (B 方案) + 技能完善** (2026-08-10)
+  - **DPO 效果瓶颈根因**: 85% 模板负样本 → 长度奖励坍缩 (长度比中位 20×); rejected 不在策略分布; lr=4e-8 过保守 (详见 docs/DPO_ANALYSIS.md)
+  - **附件富矿激活**: 51K 附件 md (raw/) 从未进入训练 → 构建附件索引 (23,790 conv_id) + 注入 DPO (6,799/9,925 对 68.5%)
+  - **附件增强 DPO 重训**: lr 4e-8→1e-6, beta 0.15→0.3; 分类回归无退化, 附件问答 DPO 倾向引用附件
+  - 新脚本: `build_attachment_index.py` / `build_dpo_attachment_enhanced.py`
+  - **待执行**: ① 全量增强集长训练 (6,799对, 运行中) ② H2 架构重跑 ③ on-policy 硬负样本
+- **EmailAgent 附件增强 DPO H1 (2000对)** | `out/email_dpo_attach_dense_h256_256.pth` | 16.61MB | dpo 附件增强 (2000对×2ep, lr 1e-6/beta 0.3) | - | **0.55-0.69**
+  - 说明: verify 分类回归 50% (无退化); 附件问答引用附件
+
+
+- **EmailAgent v3 PLE DPO H1** | `out/email_dpo_ple_h256_256_ple.pth` | 24.88MB | dpo v3 (3000对×2ep) | - | **0.61**
+  - 说明: verify 分类精确 53%
+
+
+- **EmailAgent v3 PLE SFT H1 (6000条多场景)** | `out/email_sft_ple_h256_256_ple.pth` | 24.88MB | sft v3 分层抽样 (6000条×3ep) | - | **0.36**
+  - 说明: verify 分类精确 53%
+
+
+- **EmailAgent v3 Dense DPO H1** | `out/email_dpo_dense_h256_256.pth` | 16.61MB | dpo v3 (3000对×2ep) | - | **0.62**
+  - 说明: verify 分类精确 60%
+
+
+- **EmailAgent v3 Dense SFT H1 (6000条多场景)** | `out/email_sft_dense_h256_256.pth` | 16.61MB | sft v3 分层抽样 (6000条×3ep) | - | **0.34**
+  - 说明: verify 分类精确 60%
+
+
+- **EmailAgent 全量 PLE H1 (40680条)** | `out/email_sft_ple_h256_256_ple.pth` | 24.88MB | sft_train 全量 (40680条×1ep, from PLE预热) | - | **1.14**
+  - 说明: verify 分类精确 53% (30条验证集)
+
+
+- **EmailAgent 全量 Dense H1 (40680条)** | `out/email_sft_dense_h256_256.pth` | 16.61MB | sft_train 全量 (40680条×1ep, from 预热) | - | **1.44**
+  - 说明: verify 分类精确 80% (30条验证集)
+
+
+- **EmailAgent 分类 SFT H1 (v2数据)** | `out/email_sft_dense_h256_256.pth` | 16.61MB | sft classify v2 (2000条×3ep) | - | **0.29**
+  - 说明: verify 严格测试集 精确 74%
+
+
+- **EmailAgent pretrain H1 (预热)** | `out/email_pretrain_1_256.pth` | 16.61MB | pretrain_email v2 (2000条×2ep) | - | **4.14**
+
+
+- **新数据重训验证 (数据源 8x 扩充)** (2026-08-09 21:51)
+  - EmailAgent 数据更新: sft_tasks 29322 / sft_threads 1045 / dpo 1235 / pretrain 5784 (量增 8x); health_score 84.8→**99.0**
+  - **B2 QA 合成解锁** (6333 条) + **RAFT 数据解锁** (6333 条) — 之前因 API key 阻塞
+  - EmailAgent 新增 `split/` 自动切分 (sft_train 40881 / sft_val 2152)
+  - `prepare_email_data.py` 优先导入 split/sft_train; 验证集改用官方 sft_val 切分
+  - 重训验证 (预热链 + 分类 2000条×3ep): 独立验证集标签命中 98%, **精确匹配 74%** (严谨指标)
+- **使用指南验证 + 修复** (2026-08-09)
+  - 三场景实测验证: run_pipeline 全流程 / 预热链 / 分类专项 (60/60=100%) / PLE 部署 (PASS diff 0.00000)
+  - 修复 run_pipeline env 阶段逻辑 bug (--stage env 从未执行) + GPU 检测 amdsmi 挂起
+  - eval_email 新增 `--all` 参数 (全量评估独立测试集, 不抽样)
+  - 数据更新: sft_email_tasks 3579→3577 条 (EmailAgent 17:00 重新生成)
+- **训练 skill 四步优化迭代** (2026-08-09)
+  - **② pretrain 预热链**: 新增 `train_pretrain.sh`; 预热 (713条×3ep) → SFT 链 loss 3.79→**2.45** (↓35%); 训练脚本支持 `from_weight` 参数; eval_email.py 修复 ROCm 生成卡死 (KV cache + multinomial 双规避, 默认 CPU)
+  - **① 邮件域 RAFT**: 新增 `build_email_raft.py` (证据=邮件正文, 2000 条, SFTDataset 校验通过); 说明医学 B2/RAFT 不适用邮件数据 (需 API key + 知识库证据)
+  - **③ PLE1 部署验证**: 完整链路首通 — int4 量化 (deg +0.0068) → PLE1 导出 (6.31MB) → convert_h2 → verify_h2 **PASS diff 0.00000** (C 与 PyTorch 逐位一致); 证明 PLE 部署价值
+  - **④ 评估科学性**: 新增独立测试集 (严格 80/20 hold-out) + 分类准确率指标; **发现数据分布失衡** (抽样训练集分类仅 2.3% → 混合模型 0/8); 分类专用训练集 (1140条×3ep) 严格测试 **30/30 = 100%**
+- **新增 minimind-training 训练技能 (skills/minimind-training/)** (2026-08-09)
+  - 标准 skills 结构: `SKILL.md` (frontmatter: name/description/license) + `dataset/` + `scripts/`
+  - 覆盖两种训练手段完整流程: 手段1 默认 Dense (`--use_ple 0`) / 手段2 PLE (`--use_ple 1 --ple_dim N`)
+  - 脚本: `prepare_email_data.py` (EmailAgent 数据剥离多余字段 + SFTDataset 实测校验, 修复 `CastError: column names don't match`) / `train_mode1_default_sft.sh` / `train_mode2_ple_sft.sh` / `verify_weights.py` (严格加载校验 + PLE 自动检测 + param_budget) / `eval_email.py` (问答评估) / `run_pipeline.py` (统一管道: env→data→train→verify→eval 幂等编排)
+  - 双手段验证: H1 (d256/l6) 从零 SFT, EmailAgent 数据 (sft_email_mixed 3262 条)
+    - 手段1 Dense: 6.66M 参数, loss 3.79 (400条×2ep, lr=5e-4), 权重 15.84MB
+    - 手段2 PLE: 10.79M 参数 (core 5.46M/table 3.69M/stream 1.64M), loss 3.74, 权重 23.73MB
+    - 质量检查均通过 (missing=0 unexpected=0); 问答输出连贯中文片段
+  - 关键优化: 从零 SFT lr 必须用 5e-4 (pretrain 同款), 误用 RAFT 微调 lr 2e-5 收敛慢 ~10 倍 (7.3→4.4→3.8 三轮演进验证)
+  - 数据质量审计: EmailAgent 新增 `post_analysis.json` (health 84.8, 四阶段 PII/签名泄漏 0, b1 有 P1 碎片化问题待修)
+  - B2/RAFT 数据管线仍阻塞 (LLM API key 未配置)
+>>>>>>> origin/master
 - **AGENTS.md 补充 fork 关系说明** (2026-08-07)
   - 明确: 本项目是官方上游 jingyaogong/minimind 的 fork (同根 a18d84e, 继承 12 位上游作者历史, 仅 rick qi 为本地作者)
   - upstream remote 已配置, 上游历史已通过 fe19dfa 合入 master

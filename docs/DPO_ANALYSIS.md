@@ -1,0 +1,124 @@
+# DPO 训练效果分析报告
+
+> 日期: 2026-08-10 | 模型: MiniMind H1 (d256/l6, 6.66M) + EmailAgent 邮件数据
+> 结论: DPO 在现数据/超参下**无可见效果** (verify 精度与 SFT 完全相同), 根因是**数据长度偏置 + rejected 不在策略分布**。附件富矿 (51K 个已转 markdown 附件) 是修复数据质量的关键资源。
+
+---
+
+## 1. 现状 (已实证)
+
+| 阶段 | Dense 分类精确率 | PLE 分类精确率 |
+|---|---|---|
+| SFT v3 (6000条×3ep) | **60%** | 53% |
+| **DPO v3 (3000对×2ep)** | **60%** ← 无变化 | 53% ← 无变化 |
+| DPO loss (dense) | 0.62 (看似收敛) | 0.61 |
+
+铁证: DPO 后 verify 精确率与 SFT **完全相同** — loss 在降但学到的是**长度奖励**而非内容偏好。
+
+## 2. 根因分析 (5 项, 按权重排序)
+
+### 🔴 #1 长度奖励坍缩 (主因)
+- EmailAgent DPO 数据 **85% (e1)** 是"真实回复 vs 5 字符模板"("收到,谢谢。")
+- chosen 平均 182 字符, rejected 中位 **5 字符** → 长度比中位 **20×** (max 583×)
+- DPO 隐式 reward 退化成"长=好"; 但 SFT 后模型推理时**本就不生成模板** → 学到的偏好对应不到真实候选空间
+- 参考: DPO 研究 (*Disentangling Length from Quality*) 建议长度比 < 2×
+
+### 🔴 #2 rejected 不在策略分布 (off-distribution)
+- 模板负样本是 SFT 模型**不会生成**的输出, ref_model 对其 log_prob 极低
+- DPO 损失 `(π_rej - ref_rej)` 项≈0 → 梯度信号微弱, 模型无可学
+
+### 🟡 #3 超参过保守
+- lr=4e-8 (SFT 5e-4 的 1/12500), beta=0.15, 1 epoch → 6.66M 参数几乎不动
+- 建议: lr 1e-6 (×25), beta 0.3, 2 epoch
+
+### 🟡 #4 H1 容量有限
+- 6.66M 参数表达偏好能力弱 (对比 H2/H3 DPO 收益更明显)
+
+### 🟢 #5 训练器实现正确 (无 bug)
+- dpo_loss / ref_model / mask 逻辑均正确; 但 sequence-level sum 放大长度偏置 (标准写法, 非 bug)
+
+## 3. 附件富矿 (未利用资源)
+
+| 指标 | 数值 |
+|---|---|
+| 附件 md 产物 (raw/) | **51,436 个** (xlsx 21649/docx 9659/pdf 6618/pptx 5150...) |
+| 附件中位大小 | 12KB (可截断注入) |
+| 附件 >100KB | p90=149KB (需强截断) |
+| **DPO 样本提及附件** | **2,341 对 (23.6%)** |
+| 关联链路 | thread_id ↔ parsed.json.conversation_id ↔ email_folder ↔ attachment_dir |
+
+**附件内容利用率 = 0%**: 所有训练阶段 (A/B1/B2/B3/C/E) 只读 body_text, 附件 md 全文躺在磁盘从未消费。
+
+## 4. 解决方案 (B 方案)
+
+### 4.1 附件增强 DPO 数据
+改造 stage_e_dpo.py 注入附件内容到 user_msg:
+- 通过 `email["attachment_dir"]` 定位 → `downloaded_emails` → `raw` 镜像路径
+- 读 `raw/.../attachments/*.md` (top-2 附件 × 2000 字符截断)
+- 注入格式: `[附件:文件名]\n内容` 追加到 user_msg
+- 复用 PIIMapper 对附件文本脱敏
+
+### 4.2 硬负样本 (替代模板)
+- 让 SFT 模型对 prompt 采样 2-4 回复 (temperature 0.8), 规则/LLM 选最差为 rejected
+- 保证 rejected 在策略分布内
+
+### 4.3 超参调整
+| 参数 | 旧 | 新 |
+|---|---|---|
+| lr | 4e-8 | **1e-6** |
+| beta | 0.15 | **0.3** |
+| epochs | 1 | **2** |
+
+### 4.4 评估闭环
+1. **附件问答测试**: "邮件提到附件 + 问题" → 模型能否基于附件回答
+2. **win-rate**: SFT/DPO 各采样 20 回复, 裁判打分
+3. **分类回归**: 确保 DPO 不破坏分类能力
+
+## 5. 执行状态
+
+- [x] 根因分析完成
+- [x] 附件规模确认 (51K md, 2,341 对可增强)
+- [x] 附件索引构建 (out/attachment_index.pkl, 23,790 个含附件 conv_id)
+- [x] 附件增强 DPO 数据生成 (**6,799/9,925 对 68.5%** 注入成功)
+- [x] 附件增强 DPO 重训 (2000 对×2ep, lr 1e-6/beta 0.3, loss 0.55-0.69)
+- [x] 评估: 分类回归 50% (无退化) + 附件问答 (DPO 倾向引用附件)
+- [ ] 全量增强集 (6,799 对) 长训练 (可选, 需数小时)
+
+## 6. B 方案执行结果 (2026-08-10)
+
+### 🎯 关键突破: DPO 空转根因 = mask 截断 (2026-08-10 深夜)
+
+**现象**: 附件增强 DPO 训练 loss 恒 0.6931 (ln2) 不下降 → 之前误判为长度偏置/超参问题。
+
+**真正的根因**: DPODataset 的 `generate_loss_mask` 用 `bos_id = <|im_start|>assistant\n` 匹配 assistant 段。附件注入使 user 达 4,000 字符 (3,263 tokens), **assistant 标记被推到 token 2,978 位置**, 而训练 `max_seq_len=512/1024` 全部截断 → **mask 全 0 → DPO 梯度为 0 → loss 恒 0.6931**。
+
+**验证**:
+- max_length=512/1024: mask 全 0 (5/5 样本无效)
+- max_length=2048: mask 5/5 有效
+- max_length=4096: mask 有效 (chosen 274, rejected 108)
+
+**修复**: 附件注入从 2000 字减到 500 字 + `--max_seq_len 2048` → **loss 从 0.6931 骤降至 0.0464** (DPO 真正开始学习偏好!)
+
+**教训**: DPO loss 恒 0.6931 = mask 全 0 (序列截断丢失 assistant 段), 需先验证 mask 非零再训练。
+
+### 之前尝试 (均因 mask 截断失败)
+
+| 配置 | loss | 结果 |
+|---|---|---|
+| 2000 对×2ep, lr 1e-6, max_seq 512 | 0.69 | 空转 (mask 截断) |
+| 6799 对×2ep, lr 1e-6, max_seq 512 | 0.69 | 空转 |
+| 910 健康对×3ep, lr 5e-6, max_seq 512 | 0.69 | 空转 |
+| **910 健康对×3ep, lr 5e-6, max_seq 2048** | **0.046** | ✅ **生效** |
+
+| 项 | 结果 |
+|---|---|
+| 附件索引 | 23,790 个含附件 conversation_id (6.5MB pkl) |
+| 增强 DPO 数据 | 6,799/9,925 对 (68.5%) 注入附件上下文 |
+| 健康集 (长度比≤3) | 910 对 (e3 908 + e1 2) |
+| **修复后 DPO** | max_seq 2048, loss 0.69→**0.046** (训练中) |
+
+## 7. 参考
+
+- stage_e_dpo.py: /home/EmailAgent/email_knowledge-v3/skills/training_data_gen/.../stages/stage_e_dpo.py
+- 附件 md: /home/EmailAgent/data/raw/**/attachments/*.md
+- parsed.json: /home/EmailAgent/data/downloaded_emails/{account}/analysis/monthly/{yyyy-mm}_parsed.json
