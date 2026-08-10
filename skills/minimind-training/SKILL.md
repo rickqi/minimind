@@ -157,6 +157,23 @@ python scripts/register_model.py --name "EmailAgent SFT H1 Dense" \
 4. **RAFT 增强** (需证据问答): `build_medical_raft.py --no-evidence-ratio 0.3 --negative-ratio 0.15` 生成证据数据后微调
 5. **部署链路** (ESP32): `quantize_ple.py` (int4 group=32) → `export_ple1.py` → `convert_h2.py` → `verify_h2.c` (PASS 阈值 maxabs<0.02)
 
+## 多场景全链训练 (v3, 2026-08-10)
+
+EmailAgent 数据再扩充 (08-10 03:49): sft 342K/val 18K/pretrain 46K/dpo 10K, health 98.8。
+分层抽样 (SFT 6000 四类均衡 + DPO 3000 + 预热 5000), 两种手段 × 三场景 (预热/SFT/DPO):
+
+| 手段 | 预热 loss | SFT loss | DPO loss | 分类精确 (30条) |
+|---|---|---|---|---|
+| **手段1 Dense** | 4.47 | **0.34** | 0.62 | **60%** |
+| **手段2 PLE** | 4.33 | **0.36** | 0.61 | 53% |
+
+**质量检查**: 4 权重全部 missing=0/unexpected=0 ✅
+
+**发现**:
+- DPO (3000对) 在小模型短生成上效果不明显 (SFT/DPO 输出几乎一致) — DPO 需更大数据/更长生成才显优势
+- DPO 不改变分类精度 (偏好对齐 ≠ 分类能力)
+- 新验证集 (34万条数据切分) 分类难度更高: Dense 60% (vs 上轮 80% 旧验证集)
+
 ## 全量训练验证 (2026-08-09 22:30)
 
 EmailAgent 新数据全量 (sft_train 40,680 条过滤后), 两种手段各训练:

@@ -3,6 +3,22 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **EmailAgent v3 PLE DPO H1** | `out/email_dpo_ple_h256_256_ple.pth` | 24.88MB | dpo v3 (3000对×2ep) | - | **0.61**
+  - 说明: verify 分类精确 53%
+
+
+- **EmailAgent v3 PLE SFT H1 (6000条多场景)** | `out/email_sft_ple_h256_256_ple.pth` | 24.88MB | sft v3 分层抽样 (6000条×3ep) | - | **0.36**
+  - 说明: verify 分类精确 53%
+
+
+- **EmailAgent v3 Dense DPO H1** | `out/email_dpo_dense_h256_256.pth` | 16.61MB | dpo v3 (3000对×2ep) | - | **0.62**
+  - 说明: verify 分类精确 60%
+
+
+- **EmailAgent v3 Dense SFT H1 (6000条多场景)** | `out/email_sft_dense_h256_256.pth` | 16.61MB | sft v3 分层抽样 (6000条×3ep) | - | **0.34**
+  - 说明: verify 分类精确 60%
+
+
 - **EmailAgent 全量 PLE H1 (40680条)** | `out/email_sft_ple_h256_256_ple.pth` | 24.88MB | sft_train 全量 (40680条×1ep, from PLE预热) | - | **1.14**
   - 说明: verify 分类精确 53% (30条验证集)
 

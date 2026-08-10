@@ -37,3 +37,4 @@ settings.local.*
 skills/minimind-training/dataset/sft_email_all_train.jsonl
 skills/minimind-training/dataset/pretrain_email_all.jsonl
 skills/minimind-training/dataset/sft_email_multi_v2.jsonl
+skills/minimind-training/dataset/*_v3_*.jsonl
