@@ -247,3 +247,5 @@ python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 -   说明: verify 分类精确 53%
 - **EmailAgent v3 PLE DPO H1** | `out/email_dpo_ple_h256_256_ple.pth` | 24.88MB | dpo v3 (3000对×2ep) | - | **0.61**
 -   说明: verify 分类精确 53%
+- **EmailAgent 附件增强 DPO H1 (2000对)** | `out/email_dpo_attach_dense_h256_256.pth` | 16.61MB | dpo 附件增强 (2000对×2ep, lr 1e-6/beta 0.3) | - | **0.55-0.69**
+-   说明: verify 分类回归 50% (无退化); 附件问答引用附件
