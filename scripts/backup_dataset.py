@@ -1,40 +1,42 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-dataset 备份脚本: 压缩本地 dataset/ -> 时间戳 tar.gz -> 上传腾讯云 COS
+dataset 备份脚本: 压缩本地 dataset/ -> 时间戳 zip -> 上传腾讯云 COS
 
 特性:
 - 每次备份生成唯一时间戳 (YYYYMMDD_HHMMSS), 不覆盖历史备份
+- ZIP_BZIP2 压缩 (高压缩比, 比 deflate 高 ~40%)
+- 备份路径 backups/minimind/ (与其他体系 data/training_data, email_knowledge 隔离)
 - 密钥从 .env.cosine 读取 (gitignored, 不入库)
-- 支持 --exclude 排除大文件 (可选)
 - 支持 --keep-local 保留本地压缩包 (默认删除)
 
 用法:
   python scripts/backup_dataset.py                 # 备份全部 dataset/
-  python scripts/backup_dataset.py --list          # 列出 COS 已有备份
+  python scripts/backup_dataset.py --list          # 列出已有备份
   python scripts/backup_dataset.py --keep-local    # 保留本地压缩包
   python scripts/backup_dataset.py --dry-run       # 只打包不上传 (测试)
 """
 import argparse
 import datetime
 import os
-import shutil
 import sys
-import tarfile
+import zipfile
 
 sys.stdout.reconfigure(encoding='utf-8')
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATASET_DIR = os.path.join(PROJECT_ROOT, 'dataset')
 ENV_FILE = os.path.join(PROJECT_ROOT, '.env.cosine')
-# 前缀带 minimind, 避免与桶内已有备份 (data/training_data, email_knowledge) 冲突
+# 前缀带 minimind, 存到 backups/minimind/ 子目录, 避免与桶内其他备份冲突
 BACKUP_PREFIX = 'minimind-dataset-backup'
+COS_PREFIX = 'backups/minimind/'
+COMPRESSION = zipfile.ZIP_BZIP2  # 高压缩比
 
 
 def load_cos_config():
     """从 .env.cosine 加载 COS 配置."""
     if not os.path.exists(ENV_FILE):
-        sys.exit(f'[ERR] 未找到密钥文件 {ENV_FILE} (请先创建, 见 README)')
+        sys.exit(f'[ERR] 未找到密钥文件 {ENV_FILE} (请先创建)')
     cfg = {}
     with open(ENV_FILE, encoding='utf-8') as f:
         for line in f:
@@ -50,37 +52,36 @@ def load_cos_config():
 
 
 def make_archive(backup_name, dry_run=False):
-    """打包 dataset/ 为 tar.gz, 返回 (压缩包路径, 总大小MB)."""
-    out_path = os.path.join(PROJECT_ROOT, f'{backup_name}.tar.gz')
+    """打包 dataset/ 为 zip (BZIP2 高压缩), 返回 (压缩包路径, 总大小MB)."""
+    out_path = os.path.join(PROJECT_ROOT, f'{backup_name}.zip')
     if dry_run:
-        # 只计算大小, 不打真实包 (用于测试)
         total = sum(os.path.getsize(os.path.join(DATASET_DIR, f))
                     for f in os.listdir(DATASET_DIR)
                     if os.path.isfile(os.path.join(DATASET_DIR, f)))
         return out_path, total / 1e6
-    print(f'[1/3] 打包 {DATASET_DIR} -> {out_path}')
+    print(f'[1/3] 打包 {DATASET_DIR} -> {out_path} (BZIP2 高压缩)')
     total = 0
-    with tarfile.open(out_path, 'w:gz') as tar:
+    with zipfile.ZipFile(out_path, 'w', COMPRESSION, compresslevel=9) as zf:
         for f in sorted(os.listdir(DATASET_DIR)):
             p = os.path.join(DATASET_DIR, f)
             if os.path.isfile(p):
-                tar.add(p, arcname=os.path.join('dataset', f))
+                zf.write(p, arcname=os.path.join('dataset', f))
                 total += os.path.getsize(p)
-    print(f'      完成: {os.path.getsize(out_path) / 1e6:.1f}MB (源 {total / 1e6:.0f}MB)')
+    print(f'      完成: {os.path.getsize(out_path) / 1e6:.1f}MB (源 {total / 1e6:.0f}MB, 压缩比 {total / max(os.path.getsize(out_path), 1):.1f}x)')
     return out_path, total / 1e6
 
 
 def upload_to_cos(cfg, backup_name, local_path, dry_run=False):
-    """上传到 COS bucket 的 backups/ 目录."""
+    """上传到 COS bucket 的 backups/minimind/ 目录."""
     from qcloud_cos import CosConfig, CosS3Client
     if dry_run:
-        print(f'[3/3] [DRY-RUN] 模拟上传 {backup_name} -> cos://{cfg["COS_BUCKET"]}/backups/')
+        print(f'[3/3] [DRY-RUN] 模拟上传 {backup_name} -> cos://{cfg["COS_BUCKET"]}/{COS_PREFIX}')
         return True
     config = CosConfig(Region=cfg['COS_REGION'],
                        SecretId=cfg['COS_SECRET_ID'],
                        SecretKey=cfg['COS_SECRET_KEY'])
     client = CosS3Client(config)
-    key = f'backups/{backup_name}.tar.gz'
+    key = f'{COS_PREFIX}{backup_name}.zip'
     print(f'[3/3] 上传 -> cos://{cfg["COS_BUCKET"]}/{key}')
     try:
         response = client.upload_file(
@@ -88,7 +89,6 @@ def upload_to_cos(cfg, backup_name, local_path, dry_run=False):
             Key=key,
             LocalFilePath=local_path,
             EnableMD5=False,
-            progress_callback=None,
         )
         print(f'      ETag: {response.get("ETag", "?")}')
         return True
@@ -98,18 +98,16 @@ def upload_to_cos(cfg, backup_name, local_path, dry_run=False):
 
 
 def list_backups(cfg):
-    """列出 COS 已有备份."""
+    """列出 COS 已有 minimind 备份."""
     from qcloud_cos import CosConfig, CosS3Client
     config = CosConfig(Region=cfg['COS_REGION'],
                        SecretId=cfg['COS_SECRET_ID'],
                        SecretKey=cfg['COS_SECRET_KEY'])
     client = CosS3Client(config)
-    print(f'=== minimind dataset 备份列表 (cos://{cfg["COS_BUCKET"]}/backups/) ===')
+    print(f'=== minimind dataset 备份列表 (cos://{cfg["COS_BUCKET"]}/{COS_PREFIX}) ===')
     try:
-        resp = client.list_objects(Bucket=cfg['COS_BUCKET'], Prefix='backups/')
+        resp = client.list_objects(Bucket=cfg['COS_BUCKET'], Prefix=COS_PREFIX)
         contents = resp.get('Contents', [])
-        # 只显示 minimind-dataset-backup 前缀 (排除 data/training_data, email_knowledge)
-        contents = [c for c in contents if BACKUP_PREFIX in c['Key']]
         if not contents:
             print('  (空, 暂无 minimind dataset 备份)')
             return []

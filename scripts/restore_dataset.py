@@ -4,14 +4,15 @@
 dataset 恢复脚本: 从腾讯云 COS 下载备份 -> 解压到本地 dataset/
 
 特性:
-- 列出 COS 已有备份, 选择恢复
+- 列出 COS 已有 minimind 备份, 选择恢复
 - 默认恢复到最新备份; 可指定具体备份名
 - 恢复前自动备份当前 dataset/ (防误覆盖)
+- 支持 zip 压缩备份恢复
 
 用法:
   python scripts/restore_dataset.py --list                # 列出可用备份
   python scripts/restore_dataset.py                       # 恢复最新备份
-  python scripts/restore_dataset.py --backup dataset-backup_20260810_123456  # 指定备份
+  python scripts/restore_dataset.py --backup minimind-dataset-backup_20260810_123456  # 指定备份
   python scripts/restore_dataset.py --dry-run             # 只查不下载
 """
 import argparse
@@ -19,15 +20,16 @@ import datetime
 import os
 import shutil
 import sys
-import tarfile
+import zipfile
 
 sys.stdout.reconfigure(encoding='utf-8')
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATASET_DIR = os.path.join(PROJECT_ROOT, 'dataset')
 ENV_FILE = os.path.join(PROJECT_ROOT, '.env.cosine')
-# 前缀带 minimind, 与备份脚本一致, 避免与桶内其他备份冲突
+# 前缀带 minimind, 与备份脚本一致, 存 backups/minimind/ 子目录
 BACKUP_PREFIX = 'minimind-dataset-backup'
+COS_PREFIX = 'backups/minimind/'
 
 
 def load_cos_config():
@@ -59,12 +61,10 @@ def get_client(cfg):
 def list_backups(cfg):
     """列出 COS 备份, 返回 [(key, size, mtime)]."""
     client = get_client(cfg)
-    print(f'=== minimind dataset 备份列表 (cos://{cfg["COS_BUCKET"]}/backups/) ===')
+    print(f'=== minimind dataset 备份列表 (cos://{cfg["COS_BUCKET"]}/{COS_PREFIX}) ===')
     try:
-        resp = client.list_objects(Bucket=cfg['COS_BUCKET'], Prefix='backups/')
+        resp = client.list_objects(Bucket=cfg['COS_BUCKET'], Prefix=COS_PREFIX)
         contents = resp.get('Contents', [])
-        # 只显示 minimind-dataset-backup 前缀的备份 (排除 data/training_data, email_knowledge)
-        contents = [c for c in contents if BACKUP_PREFIX in c['Key']]
         if not contents:
             print('  (空, 暂无 minimind dataset 备份)')
             return []
@@ -82,34 +82,34 @@ def list_backups(cfg):
 
 
 def pre_backup_current():
-    """恢复前备份当前 dataset/ 为本地 tar.gz (防误覆盖)."""
+    """恢复前备份当前 dataset/ 为本地 zip (防误覆盖)."""
     if not os.path.isdir(DATASET_DIR):
         return None
     ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    bak_path = os.path.join(PROJECT_ROOT, f'pre_restore_{ts}.tar.gz')
+    bak_path = os.path.join(PROJECT_ROOT, f'pre_restore_{ts}.zip')
     print(f'[安全] 备份当前 dataset/ -> {bak_path}')
-    with tarfile.open(bak_path, 'w:gz') as tar:
+    with zipfile.ZipFile(bak_path, 'w', zipfile.ZIP_BZIP2, compresslevel=9) as zf:
         for f in sorted(os.listdir(DATASET_DIR)):
             p = os.path.join(DATASET_DIR, f)
             if os.path.isfile(p):
-                tar.add(p, arcname=os.path.join('dataset', f))
+                zf.write(p, arcname=os.path.join('dataset', f))
     return bak_path
 
 
 def download_and_restore(cfg, backup_key, dry_run=False):
     """下载备份并解压到 dataset/."""
     client = get_client(cfg)
-    backup_name = os.path.basename(backup_key)  # dataset-backup_*.tar.gz
-    local_tgz = os.path.join(PROJECT_ROOT, backup_name)
+    backup_name = os.path.basename(backup_key)  # minimind-dataset-backup_*.zip
+    local_zip = os.path.join(PROJECT_ROOT, backup_name)
 
     if not dry_run:
         print(f'[1/3] 下载 {backup_key}')
         client.download_file(
             Bucket=cfg['COS_BUCKET'],
             Key=backup_key,
-            DestFilePath=local_tgz,
+            DestFilePath=local_zip,
         )
-        print(f'      完成: {os.path.getsize(local_tgz) / 1e6:.1f}MB')
+        print(f'      完成: {os.path.getsize(local_zip) / 1e6:.1f}MB')
 
     print(f'[2/3] 解压到 {DATASET_DIR}')
     if not os.path.isdir(DATASET_DIR):
@@ -128,9 +128,9 @@ def download_and_restore(cfg, backup_key, dry_run=False):
                 os.remove(p)
                 print(f'      移除旧数据: {f}')
 
-    with tarfile.open(local_tgz, 'r:gz') as tar:
-        tar.extractall(PROJECT_ROOT, filter='data')
-    os.remove(local_tgz)
+    with zipfile.ZipFile(local_zip, 'r') as zf:
+        zf.extractall(PROJECT_ROOT)
+    os.remove(local_zip)
     print(f'      解压完成, 压缩包已清理')
 
     # 列出恢复结果
