@@ -55,8 +55,12 @@ def main():
 
     if args.list:
         resp = client.list_objects(Bucket=cfg["COS_BUCKET"], Prefix=COS_PREFIX)
+        total = 0
         for c in resp.get("Contents", []):
-            print(f'  {c["Key"]}  {c["Size"]/1024/1024:.1f}MB')
+            size = int(c["Size"])
+            total += size
+            print(f'  {c["Key"]}  {size/1024/1024:.1f}MB')
+        print(f"  共 {len(resp.get('Contents', []))} 个备份, 总计 {total/1024/1024/1024:.2f}GB")
         return
 
     if not args.src or not os.path.exists(args.src):
