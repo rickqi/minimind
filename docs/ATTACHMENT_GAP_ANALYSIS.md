@@ -87,10 +87,13 @@ def load_email_raw(email: Dict) -> Dict[str, str]:
 
 - [x] 断点根因定位 (5 处)
 - [x] 方案 B 设计 (common.py 3 函数)
-- [ ] common.py 加载器实现
-- [ ] 加载器验证 (真实 email_folder → raw)
-- [ ] C RAFT / B2 QA 接入
-- [ ] 训练验证
+- [x] common.py 加载器实现 (raw_dir/load_email_raw/load_attachment_markdown)
+- [x] 加载器验证 (真实 email_folder → raw, 正文+表格附件加载成功)
+- [x] **C RAFT 接入** (证据池 1876 篇含 543 附件, +28.9%, PII 脱敏生效)
+- [x] **B2 QA 接入** (附件内容拼入 QA 源)
+- [x] **A pretrain 接入** (附件 md 分块入语料)
+- [ ] 全量管线重跑 (C RAFT / B2 QA 附件增强数据)
+- [ ] 训练验证 (附件增强数据 → 模型)
 
 ## 七、参考
 
