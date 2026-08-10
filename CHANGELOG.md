@@ -9,8 +9,9 @@
   - **唯一时间戳**: 每次备份生成 `YYYYMMDD_HHMMSS` 唯一名, 不覆盖历史
   - **前缀隔离**: `minimind-dataset-backup_*` 与桶内已有 `data/training_data` / `email_knowledge` 备份不冲突
   - 密钥存 `.env.cosine` (gitignored), 不入库
-  - 实测: 4.1GB 打包 1488MB 上传成功; 恢复后 10 个 jsonl 条数完整 (验证 OK)
+  - 实测: 4.1GB 打包 1488MB 上传成功 (备份 `20260810_183358`); 恢复后 10 个 jsonl 条数完整 (验证 OK, 1,270,238/905,718/17,166 等)
   - 注: 修复了 restore 脚本 dry-run 误删数据的 bug (删除逻辑移至 dry_run 判断之后)
+  - 提交: `a152637`
 - **origin/master 双向分叉合并** (2026-08-10, commit `f46cf17`)
   - 本地 (405 提交: PLE/医疗/RAG) 与 origin (415 提交: EmailAgent skill/DPO 附件增强) 双向分叉
   - 通过 merge-origin 分支合并, 解决 3 个文档冲突 (.gitignore/CHANGELOG/MODELS.md)
