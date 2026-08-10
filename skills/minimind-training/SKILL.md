@@ -38,18 +38,24 @@ license: Proprietary
 ```
 skills/minimind-training/
 ├── SKILL.md                    # 本文件
-├── dataset/                    # 预处理后的训练数据 (prepare_email_data.py 输出)
-│   ├── sft_email_tasks.jsonl   #   纯 conversations (3681 条)
-│   ├── sft_email_threads.jsonl #   多轮对话 (137 条)
-│   ├── sft_email_mixed.jsonl   #   合并去重 (3432 条, 主训练集)
-│   ├── dpo_email.jsonl         #   DPO 偏好对 (168 条)
-│   └── pretrain_email.jsonl    #   预训练语料 (1060 条)
+├── dataset/                    # 预处理后的训练数据 (prepare_email_data.py 输出, git 不跟踪)
+│   ├── sft_email_tasks.jsonl   #   任务型 SFT (3579 条)
+│   ├── sft_email_threads.jsonl #   多轮对话 (131 条)
+│   ├── sft_email_mixed.jsonl   #   合并去重 (3262 条)
+│   ├── dpo_email.jsonl         #   DPO 偏好对 (1235 条)
+│   ├── pretrain_email.jsonl    #   预训练语料 (5784 条)
+│   ├── dpo_email_attach.jsonl  #   ★ 附件增强 DPO (6,799 对, build_dpo_attachment_enhanced 产出)
+│   └── test_email_classify_strict.jsonl  # 分类严格测试集 (284 条)
 └── scripts/
-    ├── prepare_email_data.py   # 数据预处理 (剥离多余字段 + 校验)
+    ├── prepare_email_data.py       # 数据预处理 (剥离多余字段 + 校验)
+    ├── build_attachment_index.py   # ★ 附件索引 (21GB parsed.json → 轻量 pkl)
+    ├── build_dpo_attachment_enhanced.py  # ★ 附件增强 DPO 构建
+    ├── train_pretrain.sh           # 预训练预热 (手段1/2 共用)
     ├── train_mode1_default_sft.sh  # 手段1: Dense SFT
     ├── train_mode2_ple_sft.sh      # 手段2: PLE SFT
-    ├── verify_weights.py       # 权重完整性检查
-    └── eval_email.py           # 问答评估
+    ├── verify_weights.py       # 权重完整性检查 (PLE 自动检测)
+    ├── eval_email.py           # 问答评估 (含分类准确率)
+    └── run_pipeline.py         # 统一管道 (env→data→train→verify→eval)
 ```
 
 ## 工作流程
@@ -156,6 +162,53 @@ python scripts/register_model.py --name "EmailAgent SFT H1 Dense" \
 3. **PLE 特有**: `ple_dim` 过大会增加表参数; 检查 `param_budget()` 三层预算
 4. **RAFT 增强** (需证据问答): `build_medical_raft.py --no-evidence-ratio 0.3 --negative-ratio 0.15` 生成证据数据后微调
 5. **部署链路** (ESP32): `quantize_ple.py` (int4 group=32) → `export_ple1.py` → `convert_h2.py` → `verify_h2.c` (PASS 阈值 maxabs<0.02)
+6. **DPO 效果不明显** (loss 降但行为不变): 检查 DPO 数据质量 — 若 rejected 多为模板/超短, 是**长度奖励坍缩**, 需附件增强或硬负样本 (见下节)
+
+## DPO 附件增强流程 (★ 重要, 2026-08-10)
+
+**问题背景**: EmailAgent DPO 数据 85% 是"真实回复 vs 5 字符模板", 长度比中位 20× → DPO 学到长度而非内容。同时 **51K 个附件 markdown (raw/) 从未进入训练** (利用率 0%)。
+
+**流程** (3 步):
+
+```bash
+# 1. 构建附件索引 (21GB parsed.json → 轻量 pkl, 一次性 ~14 分钟)
+python scripts/build_attachment_index.py --out out/attachment_index.pkl
+#    → 23,790 个含附件 conversation_id → attachment_dir 映射
+
+# 2. 附件增强 DPO 数据 (注入附件全文到 user_msg)
+python scripts/build_dpo_attachment_enhanced.py \
+    --src /home/EmailAgent/data/training_data/split/dpo_train.jsonl \
+    --index out/attachment_index.pkl \
+    --out skills/minimind-training/dataset/dpo_email_attach.jsonl
+#    → 6,799/9,925 对 (68.5%) 注入附件上下文
+
+# 3. DPO 重训 (新超参)
+cd trainer && python3 -u train_dpo.py \
+    --learning_rate 1e-6 --beta 0.3 --epochs 2 \
+    --data_path ../skills/minimind-training/dataset/dpo_email_attach.jsonl \
+    --from_weight email_sft_dense_h256 --save_weight email_dpo_attach_dense_h256
+```
+
+**关键参数**:
+| 参数 | 旧 (无效) | 新 (有效) | 理由 |
+|---|---|---|---|
+| lr | 4e-8 | **1e-6** | 小模型需要更强更新 |
+| beta | 0.15 | **0.3** | 更强 KL 约束防遗忘 |
+| epochs | 1 | **2** | 更多学习 |
+
+**注入格式**: `[附件: 文件名]\n附件内容` 追加到 user_msg (top-2 附件 × 2000 字符, 总长 ≤4000)。
+
+**已验证**: 分类回归无退化 (50%), 附件问答 DPO 倾向"引用附件"回复。
+
+**已知陷阱**:
+- dpo thread_id 带 `_数字` 后缀, 需 `normalize_tid` 剥离后匹配 conversation_id
+- 附件长样本使 DPO 训练慢 (AMD 890M: 2000 对×2ep ≈ 40 分钟; 6,799 对 ≈ 数小时)
+- 附件 md 未脱敏, 生产需扩展 PIIMapper
+
+**待执行任务**:
+- [ ] ① 全量增强集 (6,799 对) 长训练 (验证完整效果)
+- [ ] ② H2 架构重跑 (更大模型, DPO 收益更明显)
+- [ ] ③ on-policy 硬负样本 (SFT 采样 rejected, 替代部分模板)
 
 ## 多场景全链训练 (v3, 2026-08-10)
 
@@ -367,3 +420,7 @@ python skills/minimind-training/scripts/run_pipeline.py --mode 2 --stage verify 
 4. **脚本名 ≠ 训练器**: `wsl_train_h2_raft.sh` 实际跑 `train_full_sft.py` (SFT 微调)
 5. **量化 group 必须 32** (128 崩, 16 过拟合)
 6. **golden 必须来自反量化模型** (否则测的是量化误差而非转换正确性)
+7. **DPO thread_id 带 `_数字` 后缀**: 需 `normalize_tid` 剥离后匹配 parsed.json conversation_id
+8. **DPO 模板负样本 = 长度奖励坍缩**: rejected 若是 5 字符模板 (长度比 >20×), DPO 学到"长=好"而非内容; 用附件增强或 on-policy 硬负样本
+9. **附件 md 未脱敏**: 注入训练数据前需扩展 PIIMapper
+10. **AMD 890M 长样本 DPO 慢**: 附件注入使每条样本变长, 双模型 forward 慢 (~20s/step); 大训练集用后台跑

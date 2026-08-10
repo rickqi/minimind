@@ -3,6 +3,12 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **DPO 附件增强 (B 方案) + 技能完善** (2026-08-10)
+  - **DPO 效果瓶颈根因**: 85% 模板负样本 → 长度奖励坍缩 (长度比中位 20×); rejected 不在策略分布; lr=4e-8 过保守 (详见 docs/DPO_ANALYSIS.md)
+  - **附件富矿激活**: 51K 附件 md (raw/) 从未进入训练 → 构建附件索引 (23,790 conv_id) + 注入 DPO (6,799/9,925 对 68.5%)
+  - **附件增强 DPO 重训**: lr 4e-8→1e-6, beta 0.15→0.3; 分类回归无退化, 附件问答 DPO 倾向引用附件
+  - 新脚本: `build_attachment_index.py` / `build_dpo_attachment_enhanced.py`
+  - **待执行**: ① 全量增强集长训练 (6,799对, 运行中) ② H2 架构重跑 ③ on-policy 硬负样本
 - **EmailAgent 附件增强 DPO H1 (2000对)** | `out/email_dpo_attach_dense_h256_256.pth` | 16.61MB | dpo 附件增强 (2000对×2ep, lr 1e-6/beta 0.3) | - | **0.55-0.69**
   - 说明: verify 分类回归 50% (无退化); 附件问答引用附件
 
