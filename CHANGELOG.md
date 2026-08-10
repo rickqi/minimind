@@ -3,6 +3,17 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **origin/master 双向分叉合并** (2026-08-10, commit `f46cf17`)
+  - 本地 (405 提交: PLE/医疗/RAG) 与 origin (415 提交: EmailAgent skill/DPO 附件增强) 双向分叉
+  - 通过 merge-origin 分支合并, 解决 3 个文档冲突 (.gitignore/CHANGELOG/MODELS.md)
+  - 合入 EmailAgent 训练体系: `skills/minimind-training/` (11 脚本: prepare_email_data/build_attachment_index/build_dpo_attachment_enhanced 等)
+  - 分支已同步, 后续禁止 force-push
+- **下载训练数据清单** (2026-08-10 盘点, 3 个文件, 均 gitignored)
+  - `dataset/pretrain_t2t_mini.jsonl` (1,183MB, 1,270,238 条) — 官方预训练 mini, 来源 ModelScope `gongjy/minimind_dataset`
+  - `dataset/sft_t2t_mini.jsonl` (1,659MB, 905,718 条) — 官方 SFT mini, 同源 (已混入 Tool Call)
+  - `dataset/dpo.jsonl` (51MB, 17,166 条) — 官方 DPO, 源自 DPO-En-Zh-20k
+  - 本地生成对照: 7 个 medical 系列 (管线 A/B1/B2/pure/RAFT/mix 产出)
+  - 注: EmailAgent 数据是运行时从外部 `/home/EmailAgent` 导入, 非 git 合并产物
 - **DPO 附件增强 (B 方案) + 技能完善** (2026-08-10)
   - **DPO 效果瓶颈根因**: 85% 模板负样本 → 长度奖励坍缩 (长度比中位 20×); rejected 不在策略分布; lr=4e-8 过保守 (详见 docs/DPO_ANALYSIS.md)
   - **附件富矿激活**: 51K 附件 md (raw/) 从未进入训练 → 构建附件索引 (23,790 conv_id) + 注入 DPO (6,799/9,925 对 68.5%)
