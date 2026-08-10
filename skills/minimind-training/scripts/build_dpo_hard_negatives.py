@@ -32,13 +32,26 @@ PROJECT_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 WEAK_PATTERNS = ["收到", "好的", "谢谢", "了解", "稍后", "尽快", "OK", "ok", "没问题"]
 
 
-def is_weak_reply(text: str) -> bool:
+def is_weak_reply(text: str, chosen_len: int) -> bool:
+    """判定采样回复是否为弱回复。
+
+    长度偏置问题: 只判短回复 (len<15) 会让 rejected 恒短 → 长度比 >20x。
+    改进: rejected 长度需与 chosen 接近 (0.5-1.5x), 同时内容空洞 (模板/重复/信息少)。
+    """
     t = text.strip()
     if len(t) < 15:
-        return True
+        return False  # 太短不选 (避免长度偏置, 交给后续长度匹配)
+    # 长度匹配: rejected 应在 chosen 的 0.5-1.5x 范围 (防止长度偏置)
+    ratio = max(len(t), chosen_len) / max(min(len(t), chosen_len), 1)
+    if ratio > 1.5:
+        return False  # 长度差太大不选
+    # 内容质量: 模板开头 / 重复 / 信息密度低 → 判为弱
     if any(t.startswith(p) for p in WEAK_PATTERNS):
         return True
     if len(set(t)) < 8:
+        return True
+    # 信息密度: 与 chosen 相比明显空洞
+    if len(t) < chosen_len * 0.5:
         return True
     return False
 
@@ -89,7 +102,7 @@ def main():
             user_msg = d["chosen"][0]["content"]
             chosen = d["chosen"][-1]["content"]
             replies = sample_reply(model, tokenizer, user_msg, args.device, args.num_samples)
-            weak = [r for r in replies if is_weak_reply(r)]
+            weak = [r for r in replies if is_weak_reply(r, len(chosen))]
             if not weak:
                 n_skip += 1
                 continue

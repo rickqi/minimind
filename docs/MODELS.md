@@ -251,3 +251,5 @@ python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 -   说明: verify 分类回归 50% (无退化); 附件问答引用附件
 - **EmailAgent 修复版 DPO H1 (mask截断修复)** | `out/email_dpo_healthy_h256_256.pth` | 16.61MB | 健康集 910对×3ep, max_seq 2048, lr 5e-6/beta 0.5 | - | **0.69→0.0000 (过拟合)**
 -   说明: verify 分类回归 50% (无退化)
+- **EmailAgent H2 SFT (d384, 全量3262条)** | `out/email_sft_dense_h384_384.pth` | 39.37MB | sft_email_mixed (3262条×3ep) | - | **1.13**
+-   说明: verify 分类 45%; 附件问答自然 (vs H1 重复)
