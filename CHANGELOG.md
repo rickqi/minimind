@@ -3,6 +3,9 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **训练结果综合分析报告** (2026-08-10)
+  - `docs/TRAINING_COMPARISON.md`: 10 权重 / 4 对比维度 / 3 阶段 DPO 演进全对比
+  - 结论: 数据 > 架构 > DPO (分类 50% 全模型一致, 由 SFT 决定); H2 附件理解显著优于 H1; PLE=Dense (训练期); DPO 在 H1 价值有限
 - **EmailAgent H2 SFT (d384, 全量3262条)** | `out/email_sft_dense_h384_384.pth` | 39.37MB | sft_email_mixed (3262条×3ep) | - | **1.13**
   - 说明: verify 分类 45%; 附件问答自然 (vs H1 重复)
 
