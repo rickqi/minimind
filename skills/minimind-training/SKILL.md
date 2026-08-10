@@ -424,4 +424,7 @@ python skills/minimind-training/scripts/run_pipeline.py --mode 2 --stage verify 
 8. **DPO 模板负样本 = 长度奖励坍缩**: rejected 若是 5 字符模板 (长度比 >20×), DPO 学到"长=好"而非内容; 用附件增强或 on-policy 硬负样本
 9. **附件 md 未脱敏**: 注入训练数据前需扩展 PIIMapper
 10. **AMD 890M 长样本 DPO 慢**: 附件注入使每条样本变长, 双模型 forward 慢 (~20s/step); 大训练集用后台跑
-11. **⚠️ DPO loss 恒 0.6931 = mask 截断**: `generate_loss_mask` 用 `<|im_start|>assistant\n` 匹配 assistant 段; 附件注入使 user 超长, assistant 被推到 max_seq_len 外 → **mask 全 0 → DPO 梯度为 0 → loss 恒 ln2**。修复: 训练前验证 mask 非零 (DPODataset[i]['mask_chosen'].sum()>0), max_seq_len 需覆盖 assistant 段位置 (附件注入 500 字 + max_seq_len 2048 实测有效, loss 0.69→0.046)
+11. **⚠️⚠️ DPO loss 恒 0.6931 = mask 截断 (常驻调优关注项)**: `generate_loss_mask` 用 `<|im_start|>assistant\n` 匹配 assistant 段; 附件注入使 user 超长, assistant 被推到 max_seq_len 外 → **mask 全 0 → DPO 梯度为 0 → loss 恒 ln2 (静默空转, loss 看似正常但不下降)**。
+    - **前置检查 (每次 DPO 训练前必做)**: `DPODataset[i]['mask_chosen'].sum()>0` (抽样 5 样本), 防静默空转
+    - **修复**: max_seq_len 需覆盖 assistant 段位置 (附件注入 500 字 + max_seq_len 2048 实测有效, loss 0.69→0.046)
+    - **⚠️ 非最优, 需持续验证**: 附件 500 字截断损失信息; 健康集仅 910 对 (过滤 87%); loss 0.008 可能过拟合。持续扫描 max_seq_len / 注入长度消融 / 健康集扩充 / H2 验证 (详见 docs/DPO_ANALYSIS.md §6 调优关注点)
