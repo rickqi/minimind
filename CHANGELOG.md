@@ -3,6 +3,13 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **附件富矿注入预训练语料 (A 阶段)** (2026-08-11)
+  - **数据**: `pretrain_email_full_v2.jsonl` (1,690,017 样本, 3.5GB, 位于 EmailAgent/training_data/pretrain/)
+  - **断点打通**: 6 管线附件利用率 0% → 新增 raw/ 加载器 (common.py 4 函数) + C RAFT/B2 QA/A pretrain 接入
+  - **提升**: 预训练语料 ~5K → 169 万 (300x); 表格 88K (5.2%) + 长文档 39K (2.3%)
+  - **工程**: 分月脚本 run_pretrain_by_month.py 规避全量内存不足 (2GB vs 20GB)
+  - **待办**: B2 QA / C RAFT 附件增强需 LLM API key (.env 未配置); 训练验证
+  - 详见 `docs/ATTACHMENT_GAP_ANALYSIS.md`
 - **训练结果综合分析报告** (2026-08-10)
   - `docs/TRAINING_COMPARISON.md`: 10 权重 / 4 对比维度 / 3 阶段 DPO 演进全对比
   - 结论: 数据 > 架构 > DPO (分类 50% 全模型一致, 由 SFT 决定); H2 附件理解显著优于 H1; PLE=Dense (训练期); DPO 在 H1 价值有限

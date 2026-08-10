@@ -46,6 +46,8 @@ skills/minimind-training/
 │   ├── pretrain_email.jsonl    #   预训练语料 (5784 条)
 │   ├── dpo_email_attach.jsonl  #   ★ 附件增强 DPO (6,799 对, build_dpo_attachment_enhanced 产出)
 │   └── test_email_classify_strict.jsonl  # 分类严格测试集 (284 条)
+│   (附件增强预训练 1,690,017 样本在 EmailAgent 数据目录:
+│    /home/EmailAgent/data/training_data/pretrain/pretrain_email_full_v2.jsonl)
 └── scripts/
     ├── prepare_email_data.py       # 数据预处理 (剥离多余字段 + 校验)
     ├── build_attachment_index.py   # ★ 附件索引 (21GB parsed.json → 轻量 pkl)

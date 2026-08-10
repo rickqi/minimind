@@ -137,6 +137,7 @@ models/full_sft_h2_raft_v4_h384_ple1.bin  H2 RAFT v4 PLE1 (14.73MB)
 | `sft_medical_pure.jsonl` | 13,069 | 1.9M | 纯医学 SFT |
 | `sft_medical_raft.jsonl` | 8,000 | 2.2M | RAFT 复述 (v4: 负样本+医学过滤) |
 | `sft_medical_mixed.jsonl` | 56,808 | 16.6M | 医疗增强 SFT (1:3) |
+| `pretrain_email_full_v2.jsonl` 🔥 | **1,690,017** | ~300M | **邮件+附件增强预训练** (EmailAgent: 102K 邮件正文 + 51K 附件 md, 2022-2026; 含表格 88K + 长文档 39K) |
 
 ---
 
