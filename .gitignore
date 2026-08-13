@@ -41,3 +41,4 @@ skills/minimind-training/dataset/*_v3_*.jsonl
 # DPO 附件增强临时数据 (可重建)
 skills/minimind-training/dataset/dpo_email_attach*.jsonl
 out/attachment_index.pkl
+skills/minimind-training/dataset/*_v4_*.jsonl

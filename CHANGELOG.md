@@ -3,6 +3,10 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **EmailAgent V4 DPO H1 (完整数据链抽样)** | `out/email_dpo_v4_h256_256.pth` | 16.61MB | pretrain 20k + sft 15k五类 + dpo 3k (完整链抽样) | - | **DPO 0.0026**
+  - 说明: verify 分类 40% (SFT=DPO)
+
+
 - **附件增强预训练: COS 备份 + 训练验证** (2026-08-11)
   - **COS 备份**: `cos://ins-kq6zz7wo/backups/email-pretrain/pretrain_email_v2_20260811_004129.zip` (724MB, 3.5GB→9x 压缩); 新增 `scripts/backup_any.py` 通用备份 (含 `--list` 查询, 已验证 1 备份 0.71GB)
   - **抽样子集**: `pretrain_email_200k.jsonl` (199,931 条: 表格 5 万 + 长文档 3 万 + 普通 12 万) + `pretrain_email_10k.jsonl` 快速验证集 (构成一致: 表格 ~25% + 长文档 ~15%)

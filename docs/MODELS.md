@@ -254,3 +254,5 @@ python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 -   说明: verify 分类回归 50% (无退化)
 - **EmailAgent H2 SFT (d384, 全量3262条)** | `out/email_sft_dense_h384_384.pth` | 39.37MB | sft_email_mixed (3262条×3ep) | - | **1.13**
 -   说明: verify 分类 45%; 附件问答自然 (vs H1 重复)
+- **EmailAgent V4 DPO H1 (完整数据链抽样)** | `out/email_dpo_v4_h256_256.pth` | 16.61MB | pretrain 20k + sft 15k五类 + dpo 3k (完整链抽样) | - | **DPO 0.0026**
+-   说明: verify 分类 40% (SFT=DPO)
