@@ -229,6 +229,10 @@ python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 
 ## 九、最近模型登记 (自动)
 
+- **EmailAgent full_v2 SFT H2 (342K)** | `out/email_sft_h2_384.pth` | 37.54MB | sft_email_train_full (342K条×2ep, from H2 3ep预训练) | - | **0.017**
+  - 说明: verify missing=0 ✅ | logits_std 2.96 | eval 回复模板正确
+- **EmailAgent full_v2 预训练 3-epoch H2** | `out/email_pretrain_h2_384.pth` | 37.54MB | pretrain_email_full_v2 (169万条×3ep, 7.8h) | - | **0.591**
+  - 说明: verify missing=0 ✅ | logits_std 4.12 | batch=32 compile 180 samp/s | H1→H2 容量提升收敛更好
 - **EmailAgent full_v2 DPO H1** | `out/email_dpo_h256_256.pth` | 16.61MB | dpo_email (10448对×2ep, lr 1e-6/beta 0.3, from SFT) | - | **0.006**
   - 说明: verify missing=0 ✅ | 陷阱#11 预检通过(max_seq_len 1024, mask 非0) | eval: SFT/DPO 输出一致(小模型 DPO 效果不明显)
 - **EmailAgent full_v2 SFT H1 (342K)** | `out/email_sft_dense_h256_256.pth` | 16.61MB | sft_email_train_full (342K条×2ep, from 3ep预训练) | - | **0.031**

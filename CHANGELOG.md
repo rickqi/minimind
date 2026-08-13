@@ -3,6 +3,11 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **EmailAgent full_v2 H2 全管线 (d384/l8 Dense, 2026-08-13)** — H2 架构重跑
+  - **预训练**: `email_pretrain_h2_384.pth` (full_v2 169万条×3ep, batch=32 compile, 180 samp/s, 7.8h), loss **0.591** (vs H1 3ep 0.645, 大模型收敛更好); verify missing=0 ✅ logits_std 4.12
+  - **SFT**: `email_sft_h2_384.pth` (sft_email_train_full 342K×2ep, from H2预训练), loss **0.017** (vs H1 0.031); verify missing=0 ✅ logits_std 2.96
+  - **eval**: 任务模板正确(回复"收到,关于「...」一事"), 与 H1 输出一致
+  - **H1 vs H2 对比**: H2(~24M, 大 3.6×)预训练/SFT loss 均更低、logits 更确定 — 符合大模型容量优势; 自主链 `chain_h2_pipeline.sh` 全自动完成
 - **训练硬件自动评估 + 自主链路工具 (2026-08-13)** — 新增训练优化与编排脚本
   - `hardware_profile.py`: 训练前探测 GPU/统一内存/CPU 核数 + 微基准扫描 batch_size/num_workers 拐点; 发现 GB10 统一内存 112GB + torch.compile 提速 40%
   - `train_pretrain_auto.sh`: 自动调参预训练 wrapper (先 profile 再启动 + use_compile + from_resume)
