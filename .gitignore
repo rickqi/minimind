@@ -42,3 +42,12 @@ skills/minimind-training/dataset/*_v3_*.jsonl
 skills/minimind-training/dataset/dpo_email_attach*.jsonl
 out/attachment_index.pkl
 skills/minimind-training/dataset/*_v4_*.jsonl
+
+# COS 备份数据 (大文件, 可重新下载)
+dataset/cos_dpo/
+dataset/training_data/
+dataset/*.tar.gz
+dataset/*.tar
+
+# opencode 内部状态
+.omo/
