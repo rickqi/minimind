@@ -137,13 +137,20 @@ def main():
         report["dpo_email"] = n
         print(f"  dpo_email: {n} 条 (原样拷贝) → {out_dpo}")
 
-    # 5. Pretrain (原样拷贝)
-    src_pretrain = os.path.join(args.src, "pretrain", "pretrain_email.jsonl")
+    # 5. Pretrain (原样拷贝) — 优先全量版 full_v2, 回退 mini 版
+    src_full_v2 = os.path.join(args.src, "pretrain", "pretrain_email_full_v2.jsonl")
+    src_mini = os.path.join(args.src, "pretrain", "pretrain_email.jsonl")
     out_pretrain = os.path.join(args.out, "pretrain_email.jsonl")
+    if os.path.exists(src_full_v2):
+        src_pretrain = src_full_v2
+        variant = "full_v2 (全量)"
+    else:
+        src_pretrain = src_mini
+        variant = "mini"
     if os.path.exists(src_pretrain):
         n = copy_raw(src_pretrain, out_pretrain)
         report["pretrain_email"] = n
-        print(f"  pretrain_email: {n} 条 (原样拷贝) → {out_pretrain}")
+        print(f"  pretrain_email [{variant}]: {n} 条 (原样拷贝) → {out_pretrain}")
 
     # 6. 质量校验: 用 SFTDataset 实测可加载性
     print("-" * 60)
