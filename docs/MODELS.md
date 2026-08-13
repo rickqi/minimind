@@ -229,6 +229,12 @@ python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 
 ## 九、最近模型登记 (自动)
 
+- **EmailAgent full_v2 DPO H1** | `out/email_dpo_h256_256.pth` | 16.61MB | dpo_email (10448对×2ep, lr 1e-6/beta 0.3, from SFT) | - | **0.006**
+  - 说明: verify missing=0 ✅ | 陷阱#11 预检通过(max_seq_len 1024, mask 非0) | eval: SFT/DPO 输出一致(小模型 DPO 效果不明显)
+- **EmailAgent full_v2 SFT H1 (342K)** | `out/email_sft_dense_h256_256.pth` | 16.61MB | sft_email_train_full (342K条×2ep, from 3ep预训练) | - | **0.031**
+  - 说明: verify missing=0/unexpected=0 ✅ | logits_std 2.38 | 从 3-epoch 预热链续训
+- **EmailAgent full_v2 预训练 3-epoch H1** | `out/email_pretrain_3ep_256.pth` | 16.61MB | pretrain_email_full_v2 (169万条×3ep) | - | **0.645**
+  - 说明: verify missing=0/unexpected=0 ✅ | logits_std 3.44 | GB10 compile 加速, 64min/epoch
 - **H2 RAFT v4** | `out/full_sft_h2_raft_v4_384_ple.pth` | 54.85MB | sft_medical_raft (8K, 负样本+医学过滤) | - | **2.70**
 -   说明: PLE1: `models/full_sft_h2_raft_v4_h384_ple1.bin` (14.73MB) | int4: `models/full_sft_h2_raft_v4_384_int4_g32.pth` (26.58MB) | 部署: `../esp32-ai/firmware/model_v5/H2/model_llm.bin` (14.73MB) | verify PASS diff 0.00001
 - **H1 RAFT v4** | `out/full_sft_h1_raft_v4_256_ple.pth` | 24.88MB | sft_medical_raft (8K, 负样本+医学过滤) | - | **2.90**

@@ -52,7 +52,9 @@ skills/minimind-training/
     ├── prepare_email_data.py       # 数据预处理 (剥离多余字段 + 校验)
     ├── build_attachment_index.py   # ★ 附件索引 (21GB parsed.json → 轻量 pkl)
     ├── build_dpo_attachment_enhanced.py  # ★ 附件增强 DPO 构建
-    ├── train_pretrain.sh           # 预训练预热 (手段1/2 共用)
+    ├── hardware_profile.py         # ★ 训练前硬件探测 + 参数自动调优 (batch/workers 拐点)
+    ├── train_pretrain_auto.sh      # ★ 自动调参预训练 (先 profile 再启动, use_compile+from_resume)
+    ├── train_pretrain.sh           # 预训练预热 (手段1/2 共用, 固定参数)
     ├── train_mode1_default_sft.sh  # 手段1: Dense SFT
     ├── train_mode2_ple_sft.sh      # 手段2: PLE SFT
     ├── verify_weights.py       # 权重完整性检查 (PLE 自动检测)

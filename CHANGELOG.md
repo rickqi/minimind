@@ -3,6 +3,22 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **训练硬件自动评估 + 自主链路工具 (2026-08-13)** — 新增训练优化与编排脚本
+  - `hardware_profile.py`: 训练前探测 GPU/统一内存/CPU 核数 + 微基准扫描 batch_size/num_workers 拐点; 发现 GB10 统一内存 112GB + torch.compile 提速 40%
+  - `train_pretrain_auto.sh`: 自动调参预训练 wrapper (先 profile 再启动 + use_compile + from_resume)
+  - `chain_*.sh` (3 个): 自主链式管道 (setsid 脱离, 1ep→续训→verify→SFT→verify→eval 无人值守)
+- **EmailAgent full_v2 DPO H1 (2026-08-13)** — DPO 阶段 + 陷阱#11 验证
+  - **陷阱#11 预检**: 抽样 DPODataset mask_chosen.sum() @ max_seq_len=1024 → 5/5 非0(平均80), 512 则 1/5 截断 → 选 1024
+  - **DPO 训练**: `email_dpo_h256_256.pth` (dpo_email 10448对×2ep, lr 1e-6/beta 0.3, from SFT, max_seq_len 1024, compile)
+  - **结果**: loss 0.54→**0.0061**(远低 ln2=0.6931, 证明 mask 有效无静默空转); verify missing=0 ✅
+  - **eval 对比**: SFT vs DPO 问答输出几乎一致 — 印证技能结论"小模型短生成 DPO 效果不明显"(偏好对齐≠生成差异)
+- **EmailAgent full_v2 全链路训练 (H1 Dense, 2026-08-13)** — 首次 full_v2 全量 + 自动调参链路
+  - **数据**: COS 备份 `training_data_20260813_064206.tar.gz` (1.2GB) → 解压 4.7GB → `prepare_email_data.py` 预处理 (优先 full_v2 全量预训练语料 169万行)
+  - **硬件自动调优**: 新增 `hardware_profile.py` (探测 GPU/RAM/核心, 微基准找 batch/workers 拐点) + `train_pretrain_auto.sh` (先 profile 再启动); 发现 GB10 统一内存 112GB + torch.compile 提速 40% → 64min/epoch
+  - **3-epoch 预训练链**: `email_pretrain_1_256.pth` (1ep, loss 0.92) → 续训 2ep → `email_pretrain_3ep_256.pth` (3ep, loss 0.645); 3ep vs 1ep 决策依据: H1 仅 6.66M (minimind-3 主线 64M 的 1/10), 小模型需多 epoch 补偿容量
+  - **SFT**: `email_sft_dense_h256_256.pth` (sft_email_train_full 342K条×2ep, from 3ep预训练, loss 0.031)
+  - **质量**: 3 权重 verify 全部 missing=0/unexpected=0/forward ok ✅
+  - **自主链路**: `chain_pretrain3ep_sft.sh` setsid 脱离, 1ep→续训2ep→verify→SFT→verify 全自动完成 (09:54~12:46)
 - **EmailAgent V4 DPO H1 (完整数据链抽样)** | `out/email_dpo_v4_h256_256.pth` | 16.61MB | pretrain 20k + sft 15k五类 + dpo 3k (完整链抽样) | - | **DPO 0.0026**
   - 说明: verify 分类 40% (SFT=DPO)
 
@@ -40,8 +56,6 @@
   - 提交: `a152637` (tar.gz 版) → `后续提交` (zip + backups/minimind 版)
 - **EmailAgent 修复版 DPO H1 (mask截断修复)** | `out/email_dpo_healthy_h256_256.pth` | 16.61MB | 健康集 910对×3ep, max_seq 2048, lr 5e-6/beta 0.5 | - | **0.69→0.0000 (过拟合)**
   - 说明: verify 分类回归 50% (无退化)
-
-
 - **origin/master 双向分叉合并** (2026-08-10, commit `f46cf17`)
   - 本地 (405 提交: PLE/医疗/RAG) 与 origin (415 提交: EmailAgent skill/DPO 附件增强) 双向分叉
   - 通过 merge-origin 分支合并, 解决 3 个文档冲突 (.gitignore/CHANGELOG/MODELS.md)
