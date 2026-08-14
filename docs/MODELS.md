@@ -229,6 +229,10 @@ python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 
 ## 九、最近模型登记 (自动)
 
+- **EmailAgent full_v2 SFT H2 PLE (手段2)** | `out/email_sft_h2ple_384_ple.pth` | 52.31MB | sft_email_train_full (342K条×2ep, from H2 PLE预训练) | - | **0.020**
+  - 说明: verify missing=0 ✅ (24.95M: core15.94+table6.55+stream2.46) | 部署: PLE1 `models/email_sft_h2ple_h384_ple1.bin` (14.73MB, ⚠️逼近 ESP32 14.5MB 分区上限) + int4 (26MB, deg +0.027)
+- **EmailAgent full_v2 预训练 3-epoch H2 PLE** | `out/email_pretrain_h2ple_384_ple.pth` | 52.31MB | pretrain_email_full_v2 (169万条×3ep, 从零) | - | **0.552**
+  - 说明: verify missing=0 ✅ | PLE 略优于 H2 Dense (0.591) | batch=32 231 samp/s
 - **EmailAgent full_v2 SFT H1 PLE (手段2)** | `out/email_sft_h1ple_256_ple.pth` | 23.73MB | sft_email_train_full (342K条×2ep, from PLE预训练) | - | **0.022**
   - 说明: verify missing=0 ✅ (10.79M: core5.46+table3.69+stream1.64) | eval 回复模板正确 | 部署: PLE1 `models/email_sft_h1ple_h256_ple1.bin` (6.31MB) + int4 `models/email_sft_h1ple_256_int4_g32.pth` (11MB, deg +0.116)
 - **EmailAgent full_v2 预训练 3-epoch H1 PLE** | `out/email_pretrain_h1ple_256_ple.pth` | 23.73MB | pretrain_email_full_v2 (169万条×3ep, 从零) | - | **0.681**

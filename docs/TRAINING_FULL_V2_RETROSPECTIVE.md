@@ -9,11 +9,14 @@
 | 架构 | 手段 | 预训练 loss | SFT loss | 部署产物 | 用时 |
 |---|---|---|---|---|---|
 | H1 (d256/l6) | Dense | 0.645 | 0.031 | — | ~3h |
-| H1 (d256/l6) | **PLE (ple96)** | 0.681 | **0.0225** | **PLE1 6.31MB + int4 + golden** | ~3h |
+| H1 (d256/l6) | **PLE (ple96)** | 0.681 | **0.0225** | **PLE1 6.31MB + int4 (deg+0.116) + golden** | ~3h |
 | H2 (d384/l8) | Dense | 0.591 | 0.017 | — | ~9h |
-| H2 (d384/l8) | PLE (ple128) | 进行中 | — | — | ~7h (跑) |
+| H2 (d384/l8) | **PLE (ple128)** | **0.552** | **0.0195** | **PLE1 14.73MB + int4 (deg+0.027) + golden** | ~8h |
 
+**矩阵已补完**: 两手段 × 两架构 4 组合全部完成 full_v2 (169万行) 全量训练。
 DPO (H1 Dense): loss 0.54 → **0.0061** (max_seq_len 1024, 陷阱#11 预检通过)。
+
+**注意**: H2 PLE1 14.73MB 逼近 ESP32 model 分区 14.5MB 上限, 烧录前需核对分区表, 超限仅 PC/树莓派部署。
 
 ## 二、关键结论
 
@@ -77,17 +80,28 @@ DPO (H1 Dense): loss 0.54 → **0.0061** (max_seq_len 1024, 陷阱#11 预检通�
 - `email_pretrain_3ep_256.pth` / `email_sft_dense_h256_256.pth` / `email_dpo_h256_256.pth` (H1 Dense 全链)
 - `email_pretrain_h2_384.pth` / `email_sft_h2_384.pth` (H2 Dense)
 - `email_pretrain_h1ple_256_ple.pth` / `email_sft_h1ple_256_ple.pth` (H1 PLE)
-- `email_pretrain_h2ple_384_ple.pth` / `email_sft_h2ple_384_ple.pth` (H2 PLE, 跑中)
+- `email_pretrain_h2ple_384_ple.pth` / `email_sft_h2ple_384_ple.pth` (H2 PLE)
 
 ### 部署产物 (models/, gitignored)
 - `email_sft_h1ple_h256_ple1.bin` (6.31MB) + golden + int4 (H1 PLE 可部署件)
-- `email_sft_h2ple_h384_ple1.bin` + golden + int4 (H2 PLE, 待产)
+- `email_sft_h2ple_h384_ple1.bin` (14.73MB) + golden + int4 (H2 PLE 可部署件, ⚠️逼近 ESP32 分区上限)
 
 ### 交付包
 - `/tmp/h1ple_esp32_delivery.tar.gz` (12MB) — H1 PLE 供 esp32-ai convert + verify
 
 ## 七、后续待办
-- [ ] H2 PLE 全管线完成 (后台跑中, ETA ~7h) → 登记 + 交付包
-- [ ] esp32-ai 侧: convert_h2 + verify_h2 (PASS 阈值 maxabs<0.02) — 非本项目职责
+- [x] H2 PLE 全管线完成 (2026-08-14 18:36, pretrain 0.552 / SFT 0.0195 / PLE1 14.73MB) — 已登记 + COS 备份 + 交付包
+- [ ] esp32-ai 侧: convert_h2 + verify_h2 (PASS 阈值 maxabs<0.02) — 非本项目职责; H2 PLE1 14.73MB 需先核对分区表 (14.5MB 红线)
 - [ ] DPO 在 H2 / 更长生成的效果验证 (H1 短生成无效)
 - [ ] on-policy 硬负样本 (替代模板负样本, 解决长度奖励坍缩)
+
+## 八、COS 备份索引 (backups/email-pretrain/)
+
+| 备份 | 内容 | 大小 |
+|---|---|---|
+| `email_h1ple_deploy_20260814_133332.zip` | H1 PLE 部署件 (models/) | 11.0MB |
+| `email_full_v2_weights_20260814_133338.zip` | 训练权重快照 (H2 PLE 未完时) | 213.2MB |
+| `email_ple_deploy_full_20260814_192231.zip` | 全部部署件 (H1+H2 PLE) | 36.5MB |
+| `email_full_v2_weights_final_20260814_192258.zip` | **全部最终权重** (含 H2 PLE 完成) | 260.0MB |
+
+交付包: `/tmp/h1ple_esp32_delivery.tar.gz` (12MB) + `/tmp/h2ple_esp32_delivery.tar.gz` (26MB)

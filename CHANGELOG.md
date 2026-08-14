@@ -3,6 +3,12 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **EmailAgent full_v2 H2 PLE 手段2 全链路 (2026-08-14)** — 两手段×两架构矩阵补完
+  - **从零预训练**: `email_pretrain_h2ple_384_ple.pth` (full_v2 169万×3ep, d384/l8/ple128, 24.95M, batch=32 231 samp/s), loss **0.552** (vs H2 Dense 0.591, PLE 略优); 跨 epoch 0.77→0.55→ep3 均值 ~0.55 (末步 0.552)
+  - **SFT**: `email_sft_h2ple_384_ple.pth` (342K×2ep), loss **0.0195** (vs H2 Dense 0.017, 基本一致); verify missing=0 ✅ (core15.94M+table6.55M+stream2.46M)
+  - **部署链**: int4 group=32 deg **+0.027** (fp32 2.25→int4 2.27, 远优于 H1 PLE 的 +0.116, 大模型量化更稳) → `models/email_sft_h2ple_384_int4_g32.pth` (26MB); PLE1 `models/email_sft_h2ple_h384_ple1.bin` (**14.73MB**, 117 tensors) + golden
+  - **⚠️ ESP32 flash 红线**: 14.73MB 逼近 model 分区 14.5MB 上限 (AGENTS.md: H2 余量极小), 烧录前需核对分区表; 超限则仅 PC/树莓派部署
+  - **矩阵补完**: H1/H2 × Dense/PLE 4 组合全部完成 full_v2 全量训练 (复盘见 docs/TRAINING_FULL_V2_RETROSPECTIVE.md)
 - **EmailAgent full_v2 H1 PLE 手段2 全链路 (2026-08-14)** — PLE 架构补跑 + 部署链打通
   - **从零预训练**(PLE 结构不能续自 Dense): `email_pretrain_h1ple_256_ple.pth` (full_v2 169万×3ep, d256/l6/ple96, 10.79M, batch=32 compile 385 samp/s), loss **0.681** (vs H1 Dense 3ep 0.645, PLE≈Dense 印证 SKILL.md "训练期等价"); verify missing=0 ✅ (core5.46M+table3.69M+stream1.64M)
   - **SFT**: `email_sft_h1ple_256_ple.pth` (sft_email_train_full 342K×2ep), loss **0.0225** (vs Dense 0.031, PLE 略优); verify missing=0 ✅; eval 回复模板正确
