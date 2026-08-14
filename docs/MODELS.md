@@ -229,6 +229,8 @@ python chinese_v5/convert_h2.py --in ... --out model_llm.bin  # 转换
 
 ## 九、最近模型登记 (自动)
 
+- **EmailAgent RAFT H2 PLE (精确问答)** | `out/email_raft_h2ple_384_ple.pth` | 52.31MB | sft_email_raft_v2 (6000条×2ep, 70%证据注入, from H2 PLE SFT) | - | **0.014**
+  - 说明: 证据注入问"五通一服务"完美复述定义 ✅ (vs SFT 同证据幻觉) | 精准问答=RAG检索+RAFT复述, 参数记忆不可靠
 - **EmailAgent full_v2 SFT H2 PLE (手段2)** | `out/email_sft_h2ple_384_ple.pth` | 52.31MB | sft_email_train_full (342K条×2ep, from H2 PLE预训练) | - | **0.020**
   - 说明: verify missing=0 ✅ (24.95M: core15.94+table6.55+stream2.46) | 部署: PLE1 `models/email_sft_h2ple_h384_ple1.bin` (14.73MB, ⚠️逼近 ESP32 14.5MB 分区上限) + int4 (26MB, deg +0.027)
 - **EmailAgent full_v2 预训练 3-epoch H2 PLE** | `out/email_pretrain_h2ple_384_ple.pth` | 52.31MB | pretrain_email_full_v2 (169万条×3ep, 从零) | - | **0.552**

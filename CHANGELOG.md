@@ -3,6 +3,12 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **邮件域 RAFT 精确问答验证成功 (2026-08-14)** — "精准问答 = RAG + RAFT" 路线打通
+  - **背景**: 直问"五通一服务是什么" 4 模型全部答不出枚举 (语料 95 次但参数记忆弱, 小模型能力边界)
+  - **RAFT 数据**: `build_email_raft.py` 从 full_v2 源生成 6000 条 (70% 证据=邮件原文注入 system + 30% 无证据防遗忘)
+  - **微调**: `email_raft_h2ple_384_ple.pth` (H2 PLE SFT 续训 2ep, lr 5e-5, max_seq 512, loss **0.014**)
+  - **验证 (证据注入问"五通一服务")**: RAFT 模型 **完美复述定义**"银保通，经代通，电销通，网销通，团险通+会员服务" ✅; SFT 模型同证据下输出无关幻觉 ❌
+  - **结论**: RAFT 教会模型"基于 system 证据抽取答案"行为; 精确知识问答需 RAG 检索注入 + RAFT 复述, 参数记忆不可靠 — 印证 AGENTS.md 既有结论
 - **EmailAgent full_v2 H2 PLE 手段2 全链路 (2026-08-14)** — 两手段×两架构矩阵补完
   - **从零预训练**: `email_pretrain_h2ple_384_ple.pth` (full_v2 169万×3ep, d384/l8/ple128, 24.95M, batch=32 231 samp/s), loss **0.552** (vs H2 Dense 0.591, PLE 略优); 跨 epoch 0.77→0.55→ep3 均值 ~0.55 (末步 0.552)
   - **SFT**: `email_sft_h2ple_384_ple.pth` (342K×2ep), loss **0.0195** (vs H2 Dense 0.017, 基本一致); verify missing=0 ✅ (core15.94M+table6.55M+stream2.46M)
