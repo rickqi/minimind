@@ -3,6 +3,12 @@
 本文件记录 MiniMind 仓库的显著变更。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 ## [Unreleased]
+- **EmailAgent full_v2 H1 PLE 手段2 全链路 (2026-08-14)** — PLE 架构补跑 + 部署链打通
+  - **从零预训练**(PLE 结构不能续自 Dense): `email_pretrain_h1ple_256_ple.pth` (full_v2 169万×3ep, d256/l6/ple96, 10.79M, batch=32 compile 385 samp/s), loss **0.681** (vs H1 Dense 3ep 0.645, PLE≈Dense 印证 SKILL.md "训练期等价"); verify missing=0 ✅ (core5.46M+table3.69M+stream1.64M)
+  - **SFT**: `email_sft_h1ple_256_ple.pth` (sft_email_train_full 342K×2ep), loss **0.0225** (vs Dense 0.031, PLE 略优); verify missing=0 ✅; eval 回复模板正确
+  - **部署链(int4+PLE1, PLE 核心价值)**: int4 group=32 deg **+0.116** (fp32 2.50→int4 2.62) → `models/email_sft_h1ple_256_int4_g32.pth` (11MB); PLE1 扁平 `models/email_sft_h1ple_h256_ple1.bin` (**6.31MB**, 89 tensors) + golden
+  - **后续(esp32-ai 仓库)**: convert_h2.py → firmware/model_v5/H1/model_llm.bin → verify_h2.c PASS
+  - **教训**: 部署链初版用"文件存在"作等待条件, 误在 SFT 中间权重(save_interval)上跑 + 并发抢 GPU OOM; 改为训练结束后重跑于最终权重
 - **EmailAgent full_v2 H2 全管线 (d384/l8 Dense, 2026-08-13)** — H2 架构重跑
   - **预训练**: `email_pretrain_h2_384.pth` (full_v2 169万条×3ep, batch=32 compile, 180 samp/s, 7.8h), loss **0.591** (vs H1 3ep 0.645, 大模型收敛更好); verify missing=0 ✅ logits_std 4.12
   - **SFT**: `email_sft_h2_384.pth` (sft_email_train_full 342K×2ep, from H2预训练), loss **0.017** (vs H1 0.031); verify missing=0 ✅ logits_std 2.96
